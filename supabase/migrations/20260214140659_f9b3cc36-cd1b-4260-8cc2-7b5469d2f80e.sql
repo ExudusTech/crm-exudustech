@@ -1,0 +1,1 @@
+ALTER TABLE public.email_messages ADD COLUMN resend_message_id TEXT;

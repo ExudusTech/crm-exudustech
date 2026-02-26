@@ -1,0 +1,1 @@
+ALTER TABLE public.leads ADD COLUMN publicidade_subtipo text DEFAULT NULL;
