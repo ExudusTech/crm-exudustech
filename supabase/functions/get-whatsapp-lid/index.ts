@@ -86,6 +86,7 @@ serve(async (req) => {
         headers: {
           'Content-Type': 'application/json',
           'apikey': EVOLUTION_API_KEY,
+          'ngrok-skip-browser-warning': 'true',
         },
         body: JSON.stringify({ numbers: normalizedNumbers }),
       });
