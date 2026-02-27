@@ -6,21 +6,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-interface Lead {
-  id: string;
-  name: string;
-  phone: string | null;
-  phones: string[] | null;
-  whatsapp_chat_lids: string[] | null;
-}
-
-interface ZApiPhoneExistsResponse {
-  exists: boolean;
-  lid?: string;
-  numberFormatted?: string;
-  error?: string;
-}
-
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -42,13 +27,13 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const zapiInstanceId = Deno.env.get('ZAPI_INSTANCE_ID');
-    const zapiToken = Deno.env.get('ZAPI_TOKEN');
-    const zapiClientToken = Deno.env.get('ZAPI_CLIENT_TOKEN');
+    const EVOLUTION_API_URL = Deno.env.get('EVOLUTION_API_URL');
+    const EVOLUTION_API_KEY = Deno.env.get('EVOLUTION_API_KEY');
+    const INSTANCE_NAME = Deno.env.get('EVOLUTION_INSTANCE_NAME') || 'brotherhood';
 
-    if (!zapiInstanceId || !zapiToken || !zapiClientToken) {
+    if (!EVOLUTION_API_URL || !EVOLUTION_API_KEY) {
       return new Response(
-        JSON.stringify({ error: 'Configuração do Z-API não encontrada' }),
+        JSON.stringify({ error: 'Configuração da Evolution API não encontrada' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -61,31 +46,24 @@ serve(async (req) => {
       .single();
 
     if (leadError || !lead) {
-      console.error('Lead não encontrado:', leadError);
       return new Response(
         JSON.stringify({ error: 'Lead não encontrado' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Collect all phones to check
+    // Collect phones to check
     const phonesToCheck: string[] = [];
-    
     if (phone) {
       phonesToCheck.push(phone);
     } else {
-      // Check all phones from lead
-      if (lead.phones && lead.phones.length > 0) {
-        phonesToCheck.push(...lead.phones);
-      }
-      if (lead.phone && !phonesToCheck.includes(lead.phone)) {
-        phonesToCheck.push(lead.phone);
-      }
+      if (lead.phones && lead.phones.length > 0) phonesToCheck.push(...lead.phones);
+      if (lead.phone && !phonesToCheck.includes(lead.phone)) phonesToCheck.push(lead.phone);
     }
 
     if (phonesToCheck.length === 0) {
       return new Response(
-        JSON.stringify({ success: true, message: 'Lead não possui telefones cadastrados', chatLidsAdded: [], messagesReconciled: 0 }),
+        JSON.stringify({ success: true, message: 'Lead sem telefones', chatLidsAdded: [], messagesReconciled: 0 }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -95,64 +73,55 @@ serve(async (req) => {
     const existingChatLids = lead.whatsapp_chat_lids || [];
     const newChatLids: string[] = [];
 
-    // Query Z-API for each phone
-    for (const rawPhone of phonesToCheck) {
-      const normalizedPhone = rawPhone.replace(/\D/g, '');
-      const phoneWithCountry = normalizedPhone.startsWith('55') ? normalizedPhone : `55${normalizedPhone}`;
+    // Normalize all phones and check via Evolution API in batch
+    const normalizedNumbers = phonesToCheck.map(p => {
+      const digits = p.replace(/\D/g, '');
+      return digits.startsWith('55') ? digits : `55${digits}`;
+    });
 
-      console.log(`Consultando Z-API para ${phoneWithCountry}...`);
+    try {
+      const checkUrl = `${EVOLUTION_API_URL}/chat/whatsappNumbers/${INSTANCE_NAME}`;
+      const response = await fetch(checkUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': EVOLUTION_API_KEY,
+        },
+        body: JSON.stringify({ numbers: normalizedNumbers }),
+      });
 
-      try {
-        const response = await fetch(
-          `https://api.z-api.io/instances/${zapiInstanceId}/token/${zapiToken}/phone-exists/${phoneWithCountry}`,
-          {
-            method: 'GET',
-            headers: {
-              // O Z-API exige este header em vários endpoints (ex.: send-text).
-              // Sem ele, o phone-exists retorna 400 e não conseguimos obter o @lid.
-              'Client-Token': zapiClientToken,
-            },
-          }
-        );
+      if (!response.ok) {
+        const errorBody = await response.text().catch(() => '');
+        console.error(`Erro Evolution API: ${response.status} ${errorBody}`);
+      } else {
+        const results = await response.json();
+        console.log('Evolution whatsappNumbers results:', JSON.stringify(results));
 
-        if (!response.ok) {
-          const errorBody = await response.text().catch(() => '');
-          console.error(
-            `Erro Z-API para ${phoneWithCountry}: ${response.status}${errorBody ? ` - ${errorBody}` : ''}`
-          );
-          continue;
-        }
-
-        const data: ZApiPhoneExistsResponse = await response.json();
-        console.log(`Resposta Z-API para ${phoneWithCountry}:`, data);
-
-        if (data.exists && data.lid) {
-          // Format lid with @lid suffix if not present
-          const formattedLid = data.lid.includes('@') ? data.lid : `${data.lid}@lid`;
-          
-          if (!existingChatLids.includes(formattedLid) && !newChatLids.includes(formattedLid)) {
-            newChatLids.push(formattedLid);
-            console.log(`Novo chatLid encontrado: ${formattedLid}`);
+        const items = Array.isArray(results) ? results : [];
+        for (const item of items) {
+          if (item.exists && item.jid && item.jid.includes('@lid')) {
+            const lid = item.jid;
+            if (!existingChatLids.includes(lid) && !newChatLids.includes(lid)) {
+              newChatLids.push(lid);
+              console.log(`Novo chatLid encontrado: ${lid}`);
+            }
           }
         }
-      } catch (zapiError) {
-        console.error(`Erro ao consultar Z-API para ${phoneWithCountry}:`, zapiError);
       }
+    } catch (apiError) {
+      console.error('Erro ao consultar Evolution API:', apiError);
     }
 
     // Update lead with new chatLids
     let chatLidsAdded: string[] = [];
     if (newChatLids.length > 0) {
       const updatedChatLids = [...existingChatLids, ...newChatLids];
-      
       const { error: updateError } = await supabase
         .from('leads')
         .update({ whatsapp_chat_lids: updatedChatLids })
         .eq('id', leadId);
 
-      if (updateError) {
-        console.error('Erro ao atualizar lead com chatLids:', updateError);
-      } else {
+      if (!updateError) {
         chatLidsAdded = newChatLids;
         console.log(`Lead atualizado com novos chatLids: ${newChatLids.join(', ')}`);
       }
@@ -163,40 +132,30 @@ serve(async (req) => {
     let messagesReconciled = 0;
 
     if (allChatLids.length > 0) {
-      // Find orphan messages that have phone matching any of the lids (without @lid suffix too)
       const lidPatterns = allChatLids.map(lid => {
         const cleanLid = lid.replace('@lid', '');
         return [`phone.eq.${lid}`, `phone.eq.${cleanLid}@lid`, `phone.ilike.%${cleanLid}%`];
       }).flat();
 
-      console.log(`Buscando mensagens órfãs com patterns:`, lidPatterns.slice(0, 5));
-
-      const { data: orphanMessages, error: orphanError } = await supabase
+      const { data: orphanMessages } = await supabase
         .from('whatsapp_messages')
         .select('id, phone')
         .is('lead_id', null)
         .or(lidPatterns.join(','));
 
-      if (orphanError) {
-        console.error('Erro ao buscar mensagens órfãs:', orphanError);
-      } else if (orphanMessages && orphanMessages.length > 0) {
-        console.log(`Encontradas ${orphanMessages.length} mensagens órfãs para reconciliar`);
-
+      if (orphanMessages && orphanMessages.length > 0) {
         const { error: reconError } = await supabase
           .from('whatsapp_messages')
           .update({ lead_id: leadId })
           .in('id', orphanMessages.map(m => m.id));
 
-        if (reconError) {
-          console.error('Erro ao reconciliar mensagens:', reconError);
-        } else {
+        if (!reconError) {
           messagesReconciled = orphanMessages.length;
-          console.log(`${messagesReconciled} mensagens reconciliadas`);
         }
       }
     }
 
-    // Also try to reconcile by phone number patterns (for messages that came via regular phone)
+    // Also reconcile by phone number
     const phonePatterns: string[] = [];
     for (const rawPhone of phonesToCheck) {
       const digits = rawPhone.replace(/\D/g, '');
@@ -207,15 +166,13 @@ serve(async (req) => {
     }
 
     if (phonePatterns.length > 0) {
-      const { data: phoneOrphans, error: phoneOrphanError } = await supabase
+      const { data: phoneOrphans } = await supabase
         .from('whatsapp_messages')
         .select('id')
         .is('lead_id', null)
         .or(phonePatterns.join(','));
 
-      if (!phoneOrphanError && phoneOrphans && phoneOrphans.length > 0) {
-        console.log(`Encontradas ${phoneOrphans.length} mensagens órfãs por telefone`);
-
+      if (phoneOrphans && phoneOrphans.length > 0) {
         const { error: updateErr } = await supabase
           .from('whatsapp_messages')
           .update({ lead_id: leadId })
@@ -223,12 +180,11 @@ serve(async (req) => {
 
         if (!updateErr) {
           messagesReconciled += phoneOrphans.length;
-          console.log(`${phoneOrphans.length} mensagens adicionais reconciliadas por telefone`);
         }
       }
     }
 
-    console.log(`=== RESULTADO: ${chatLidsAdded.length} chatLids adicionados, ${messagesReconciled} mensagens reconciliadas ===`);
+    console.log(`=== RESULTADO: ${chatLidsAdded.length} chatLids, ${messagesReconciled} mensagens reconciliadas ===`);
 
     return new Response(
       JSON.stringify({
@@ -242,9 +198,8 @@ serve(async (req) => {
 
   } catch (error: unknown) {
     console.error('Erro no get-whatsapp-lid:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Erro desconhecido' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

@@ -21,30 +21,28 @@ serve(async (req) => {
       );
     }
 
-    const ZAPI_INSTANCE_ID = Deno.env.get('ZAPI_INSTANCE_ID');
-    const ZAPI_TOKEN = Deno.env.get('ZAPI_TOKEN');
-    const ZAPI_CLIENT_TOKEN = Deno.env.get('ZAPI_CLIENT_TOKEN');
+    const EVOLUTION_API_URL = Deno.env.get('EVOLUTION_API_URL');
+    const EVOLUTION_API_KEY = Deno.env.get('EVOLUTION_API_KEY');
+    const INSTANCE_NAME = Deno.env.get('EVOLUTION_INSTANCE_NAME') || 'brotherhood';
 
-    if (!ZAPI_INSTANCE_ID || !ZAPI_TOKEN || !ZAPI_CLIENT_TOKEN) {
+    if (!EVOLUTION_API_URL || !EVOLUTION_API_KEY) {
       return new Response(
-        JSON.stringify({ error: 'Credenciais Z-API não configuradas' }),
+        JSON.stringify({ error: 'Credenciais Evolution API não configuradas' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Normalizar telefone (remover caracteres especiais)
-    // O número deve estar cadastrado com código de país incluso (ex: 5511999998888)
+    // Normalize phone
     let normalizedPhone = phone.replace(/\D/g, '');
 
-    // Ao iniciar um chat (primeiro outbound), precisamos persistir o chatLid no lead
-    // para que callbacks do webhook que chegam como "@lid" nunca mais virem órfãos.
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Before sending, check if number exists on WhatsApp and get LID
     let resolvedChatLid: string | null = null;
     if (leadId) {
       try {
-        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-        const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-        const supabase = createClient(supabaseUrl, supabaseKey);
-
         const { data: lead } = await supabase
           .from('leads')
           .select('id, whatsapp_chat_lids')
@@ -53,88 +51,81 @@ serve(async (req) => {
 
         const existingChatLids: string[] = lead?.whatsapp_chat_lids || [];
 
-        const phoneExistsUrl = `https://api.z-api.io/instances/${ZAPI_INSTANCE_ID}/token/${ZAPI_TOKEN}/phone-exists/${normalizedPhone}`;
-        const phoneExistsRes = await fetch(phoneExistsUrl, {
-          method: 'GET',
+        // Check WhatsApp number via Evolution API
+        const checkUrl = `${EVOLUTION_API_URL}/chat/whatsappNumbers/${INSTANCE_NAME}`;
+        const checkRes = await fetch(checkUrl, {
+          method: 'POST',
           headers: {
-            'Client-Token': ZAPI_CLIENT_TOKEN,
+            'Content-Type': 'application/json',
+            'apikey': EVOLUTION_API_KEY,
           },
+          body: JSON.stringify({
+            numbers: [normalizedPhone]
+          }),
         });
 
-        if (!phoneExistsRes.ok) {
-          const errTxt = await phoneExistsRes.text().catch(() => '');
-          console.error(
-            `Erro Z-API phone-exists para ${normalizedPhone}: ${phoneExistsRes.status}${errTxt ? ` - ${errTxt}` : ''}`
-          );
-        } else {
-          const phoneExistsData = await phoneExistsRes.json();
-          if (phoneExistsData?.exists && phoneExistsData?.lid) {
-            const formatted = (phoneExistsData.lid as string).includes('@')
-              ? (phoneExistsData.lid as string)
-              : `${phoneExistsData.lid}@lid`;
-
-            resolvedChatLid = formatted;
-
-            if (!existingChatLids.includes(formatted)) {
-              const { error: updateErr } = await supabase
-                .from('leads')
-                .update({ whatsapp_chat_lids: [...existingChatLids, formatted] })
-                .eq('id', leadId);
-
-              if (updateErr) {
-                console.error('Erro ao salvar whatsapp_chat_lids no lead:', updateErr);
-              } else {
-                console.log('chatLid persistido no lead (início de chat):', formatted);
+        if (checkRes.ok) {
+          const checkData = await checkRes.json();
+          console.log('Evolution whatsappNumbers response:', JSON.stringify(checkData));
+          
+          // Evolution returns array of results
+          const result = Array.isArray(checkData) ? checkData[0] : checkData;
+          if (result?.exists && result?.jid) {
+            const jid = result.jid;
+            // If it's a LID jid, persist it
+            if (jid.includes('@lid')) {
+              resolvedChatLid = jid;
+              if (!existingChatLids.includes(jid)) {
+                await supabase
+                  .from('leads')
+                  .update({ whatsapp_chat_lids: [...existingChatLids, jid] })
+                  .eq('id', leadId);
+                console.log('chatLid persistido no lead:', jid);
               }
-            }
 
-            // Se já existir algum callback órfão com @lid, tentar reconciliar imediatamente.
-            const { error: reconcileErr } = await supabase
-              .from('whatsapp_messages')
-              .update({ lead_id: leadId })
-              .is('lead_id', null)
-              .or(`phone.eq.${formatted},raw_data->>chatLid.eq.${formatted}`);
-
-            if (reconcileErr) {
-              console.error('Erro ao reconciliar mensagens órfãs (pre-send):', reconcileErr);
+              // Reconcile orphan messages
+              await supabase
+                .from('whatsapp_messages')
+                .update({ lead_id: leadId })
+                .is('lead_id', null)
+                .or(`phone.eq.${jid},raw_data->>chatLid.eq.${jid}`);
             }
           }
+        } else {
+          const errTxt = await checkRes.text().catch(() => '');
+          console.error(`Erro Evolution whatsappNumbers: ${checkRes.status} ${errTxt}`);
         }
       } catch (e) {
-        console.error('Falha ao resolver/persistir chatLid antes de enviar:', e);
+        console.error('Falha ao resolver chatLid antes de enviar:', e);
       }
     }
 
-    // Enviar mensagem via Z-API
-    const zapiUrl = `https://api.z-api.io/instances/${ZAPI_INSTANCE_ID}/token/${ZAPI_TOKEN}/send-text`;
+    // Send message via Evolution API
+    const sendUrl = `${EVOLUTION_API_URL}/message/sendText/${INSTANCE_NAME}`;
     
     console.log('Enviando mensagem para:', normalizedPhone);
     
-    const zapiResponse = await fetch(zapiUrl, {
+    const evolutionResponse = await fetch(sendUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Client-Token': ZAPI_CLIENT_TOKEN,
+        'apikey': EVOLUTION_API_KEY,
       },
       body: JSON.stringify({
-        phone: normalizedPhone,
-        message: message,
+        number: normalizedPhone,
+        text: message,
       }),
     });
 
-    const zapiData = await zapiResponse.json();
-    console.log('Resposta Z-API:', zapiData);
+    const evolutionData = await evolutionResponse.json();
+    console.log('Resposta Evolution API:', evolutionData);
 
-    if (!zapiResponse.ok) {
-      throw new Error(`Erro Z-API: ${JSON.stringify(zapiData)}`);
+    if (!evolutionResponse.ok) {
+      throw new Error(`Erro Evolution API: ${JSON.stringify(evolutionData)}`);
     }
 
-    // Salvar mensagem no banco de dados
+    // Save message to database
     if (leadId) {
-      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-      const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-      const supabase = createClient(supabaseUrl, supabaseKey);
-
       await supabase
         .from('whatsapp_messages')
         .insert({
@@ -143,12 +134,12 @@ serve(async (req) => {
           message: message,
           direction: 'outbound',
           timestamp: new Date().toISOString(),
-          raw_data: { ...zapiData, resolvedChatLid },
+          raw_data: { ...evolutionData, resolvedChatLid },
         });
     }
 
     return new Response(
-      JSON.stringify({ success: true, data: zapiData }),
+      JSON.stringify({ success: true, data: evolutionData }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
