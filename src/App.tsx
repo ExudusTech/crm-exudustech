@@ -5,6 +5,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { ThemeProvider } from "@/components/ThemeProvider";
+import AppHeader from "@/components/AppHeader";
 import Opportunities from "./pages/Opportunities";
 import OpportunityDetail from "./pages/OpportunityDetail";
 import Unclassified from "./pages/Unclassified";
@@ -17,29 +19,38 @@ import Settings from "./pages/Settings";
 
 const queryClient = new QueryClient();
 
+const ProtectedLayout = ({ children }: { children: React.ReactNode }) => (
+  <ProtectedRoute>
+    <AppHeader />
+    {children}
+  </ProtectedRoute>
+);
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <AuthProvider>
-          <Routes>
-            <Route path="/auth" element={<Auth />} />
-            <Route path="/" element={<ProtectedRoute><Opportunities /></ProtectedRoute>} />
-            <Route path="/opportunities" element={<ProtectedRoute><Opportunities /></ProtectedRoute>} />
-            <Route path="/opportunity/:id" element={<ProtectedRoute><OpportunityDetail /></ProtectedRoute>} />
-            <Route path="/unclassified" element={<ProtectedRoute><Unclassified /></ProtectedRoute>} />
-            <Route path="/archived" element={<ProtectedRoute><Archived /></ProtectedRoute>} />
-            <Route path="/proposal" element={<ProtectedRoute><Proposal /></ProtectedRoute>} />
-            <Route path="/insights" element={<ProtectedRoute><Insights /></ProtectedRoute>} />
-            <Route path="/configuracoes" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </AuthProvider>
-      </BrowserRouter>
-    </TooltipProvider>
+    <ThemeProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <AuthProvider>
+            <Routes>
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/" element={<ProtectedLayout><Opportunities /></ProtectedLayout>} />
+              <Route path="/opportunities" element={<ProtectedLayout><Opportunities /></ProtectedLayout>} />
+              <Route path="/opportunity/:id" element={<ProtectedLayout><OpportunityDetail /></ProtectedLayout>} />
+              <Route path="/unclassified" element={<ProtectedLayout><Unclassified /></ProtectedLayout>} />
+              <Route path="/archived" element={<ProtectedLayout><Archived /></ProtectedLayout>} />
+              <Route path="/proposal" element={<ProtectedLayout><Proposal /></ProtectedLayout>} />
+              <Route path="/insights" element={<ProtectedLayout><Insights /></ProtectedLayout>} />
+              <Route path="/configuracoes" element={<ProtectedLayout><Settings /></ProtectedLayout>} />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </AuthProvider>
+        </BrowserRouter>
+      </TooltipProvider>
+    </ThemeProvider>
   </QueryClientProvider>
 );
 
