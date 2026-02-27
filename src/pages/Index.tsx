@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
-import { Mail, Settings } from "lucide-react";
+import { Settings } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import exudusLogo from "@/assets/exudus-logo.jpeg";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -8,8 +9,8 @@ const Index = () => {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
       <div className="text-center">
-        <Mail className="mx-auto h-16 w-16 mb-6 text-primary" />
-        <h1 className="mb-4 text-4xl font-bold">Sistema de Captura de Leads</h1>
+        <img src={exudusLogo} alt="ExudusTech" className="mx-auto h-32 w-32 mb-6 rounded-xl object-cover" />
+        <h1 className="mb-4 text-4xl font-bold text-foreground">Sistema de Captura de Leads</h1>
         <p className="text-xl text-muted-foreground mb-8">
           Capture leads automaticamente via email com CloudMailin
         </p>
