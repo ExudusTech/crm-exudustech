@@ -24,6 +24,8 @@ import CeoPlaceholder from "./pages/ceo/CeoPlaceholder";
 import CeoRadar from "./pages/ceo/CeoRadar";
 import CeoOrganizations from "./pages/ceo/CeoOrganizations";
 import CeoTasks from "./pages/ceo/CeoTasks";
+import CeoFinanceiro from "./pages/ceo/CeoFinanceiro";
+import CeoStakeholders from "./pages/ceo/CeoStakeholders";
 
 const queryClient = new QueryClient();
 
