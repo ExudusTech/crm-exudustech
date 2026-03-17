@@ -52,9 +52,9 @@ const App = () => (
               {/* CEO Routes */}
               <Route path="/ceo" element={<WithLayout><CeoDashboard /></WithLayout>} />
               <Route path="/ceo/radar" element={<WithLayout><CeoRadar /></WithLayout>} />
-              <Route path="/ceo/iniciativas" element={<WithLayout><CeoPlaceholder title="Iniciativas" description="Guarda-chuvas executivos do que está sendo feito." /></WithLayout>} />
-              <Route path="/ceo/projetos" element={<WithLayout><CeoPlaceholder title="Projetos" description="Esforços operacionais delimitados no tempo." /></WithLayout>} />
-              <Route path="/ceo/produtos" element={<WithLayout><CeoPlaceholder title="Produtos" description="Ativos replicáveis, comercializáveis ou escaláveis." /></WithLayout>} />
+              <Route path="/ceo/iniciativas" element={<WithLayout><CeoIniciativas /></WithLayout>} />
+              <Route path="/ceo/projetos" element={<WithLayout><CeoProjetos /></WithLayout>} />
+              <Route path="/ceo/produtos" element={<WithLayout><CeoProdutos /></WithLayout>} />
               <Route path="/ceo/organizacoes" element={<WithLayout><CeoOrganizations /></WithLayout>} />
               <Route path="/ceo/stakeholders" element={<WithLayout><CeoStakeholders /></WithLayout>} />
               <Route path="/ceo/tarefas" element={<WithLayout><CeoTasks /></WithLayout>} />
