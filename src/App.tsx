@@ -2,11 +2,12 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
-import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { ThemeProvider } from "@/components/ThemeProvider";
-import AppHeader from "@/components/AppHeader";
+import { AppLayout } from "@/components/AppLayout";
+
+// CRM pages (preserved)
 import Opportunities from "./pages/Opportunities";
 import OpportunityDetail from "./pages/OpportunityDetail";
 import Unclassified from "./pages/Unclassified";
@@ -17,13 +18,14 @@ import Proposal from "./pages/Proposal";
 import Insights from "./pages/Insights";
 import Settings from "./pages/Settings";
 
+// CEO pages
+import CeoDashboard from "./pages/ceo/CeoDashboard";
+import CeoPlaceholder from "./pages/ceo/CeoPlaceholder";
+
 const queryClient = new QueryClient();
 
-const ProtectedLayout = ({ children }: { children: React.ReactNode }) => (
-  <ProtectedRoute>
-    <AppHeader />
-    {children}
-  </ProtectedRoute>
+const WithLayout = ({ children }: { children: React.ReactNode }) => (
+  <AppLayout>{children}</AppLayout>
 );
 
 const App = () => (
@@ -36,15 +38,44 @@ const App = () => (
           <AuthProvider>
             <Routes>
               <Route path="/auth" element={<Auth />} />
-              <Route path="/" element={<ProtectedLayout><Opportunities /></ProtectedLayout>} />
-              <Route path="/opportunities" element={<ProtectedLayout><Opportunities /></ProtectedLayout>} />
-              <Route path="/opportunity/:id" element={<ProtectedLayout><OpportunityDetail /></ProtectedLayout>} />
-              <Route path="/unclassified" element={<ProtectedLayout><Unclassified /></ProtectedLayout>} />
-              <Route path="/archived" element={<ProtectedLayout><Archived /></ProtectedLayout>} />
-              <Route path="/proposal" element={<ProtectedLayout><Proposal /></ProtectedLayout>} />
-              <Route path="/insights" element={<ProtectedLayout><Insights /></ProtectedLayout>} />
-              <Route path="/configuracoes" element={<ProtectedLayout><Settings /></ProtectedLayout>} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+
+              {/* CEO Routes */}
+              <Route path="/ceo" element={<WithLayout><CeoDashboard /></WithLayout>} />
+              <Route path="/ceo/radar" element={<WithLayout><CeoPlaceholder title="Radar Estratégico" description="Visão executiva de todos os itens do ecossistema." /></WithLayout>} />
+              <Route path="/ceo/iniciativas" element={<WithLayout><CeoPlaceholder title="Iniciativas" description="Guarda-chuvas executivos do que está sendo feito." /></WithLayout>} />
+              <Route path="/ceo/projetos" element={<WithLayout><CeoPlaceholder title="Projetos" description="Esforços operacionais delimitados no tempo." /></WithLayout>} />
+              <Route path="/ceo/produtos" element={<WithLayout><CeoPlaceholder title="Produtos" description="Ativos replicáveis, comercializáveis ou escaláveis." /></WithLayout>} />
+              <Route path="/ceo/organizacoes" element={<WithLayout><CeoPlaceholder title="Organizações" description="Clientes, parceiros, instituições e pilotos." /></WithLayout>} />
+              <Route path="/ceo/stakeholders" element={<WithLayout><CeoPlaceholder title="Stakeholders" description="Pessoas relacionadas a decisão, operação e aprovação." /></WithLayout>} />
+              <Route path="/ceo/tarefas" element={<WithLayout><CeoPlaceholder title="Tarefas" description="Gestão operacional detalhada com Kanban." /></WithLayout>} />
+              <Route path="/ceo/agenda" element={<WithLayout><CeoPlaceholder title="Agenda" description="Compromissos e planejamento." /></WithLayout>} />
+              <Route path="/ceo/financeiro" element={<WithLayout><CeoPlaceholder title="Financeiro" description="Gestão financeira empresarial." /></WithLayout>} />
+              <Route path="/ceo/fiscal" element={<WithLayout><CeoPlaceholder title="Fiscal" description="Gestão fiscal e contábil." /></WithLayout>} />
+              <Route path="/ceo/infraestrutura" element={<WithLayout><CeoPlaceholder title="Infraestrutura" description="Controle dos ativos técnicos e operacionais." /></WithLayout>} />
+              <Route path="/ceo/documentos" element={<WithLayout><CeoPlaceholder title="Documentos" description="Repositório documental central." /></WithLayout>} />
+              <Route path="/ceo/modulos" element={<WithLayout><CeoPlaceholder title="Módulos ExudusTech" description="Mapeamento de modularidade e reaproveitamento." /></WithLayout>} />
+              <Route path="/ceo/ia" element={<WithLayout><CeoPlaceholder title="IA / Assistente CEO" description="Área conversacional do sistema." /></WithLayout>} />
+
+              {/* CRM Routes (preserved) */}
+              <Route path="/crm" element={<WithLayout><Opportunities /></WithLayout>} />
+              <Route path="/crm/unclassified" element={<WithLayout><Unclassified /></WithLayout>} />
+              <Route path="/crm/archived" element={<WithLayout><Archived /></WithLayout>} />
+              <Route path="/crm/insights" element={<WithLayout><Insights /></WithLayout>} />
+
+              {/* Legacy CRM route compatibility */}
+              <Route path="/opportunities" element={<Navigate to="/crm" replace />} />
+              <Route path="/opportunity/:id" element={<WithLayout><OpportunityDetail /></WithLayout>} />
+              <Route path="/unclassified" element={<Navigate to="/crm/unclassified" replace />} />
+              <Route path="/archived" element={<Navigate to="/crm/archived" replace />} />
+              <Route path="/insights" element={<Navigate to="/crm/insights" replace />} />
+
+              {/* Shared */}
+              <Route path="/proposal" element={<WithLayout><Proposal /></WithLayout>} />
+              <Route path="/configuracoes" element={<WithLayout><Settings /></WithLayout>} />
+
+              {/* Home → CEO Dashboard */}
+              <Route path="/" element={<Navigate to="/ceo" replace />} />
+
               <Route path="*" element={<NotFound />} />
             </Routes>
           </AuthProvider>
