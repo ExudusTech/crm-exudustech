@@ -26,6 +26,11 @@ import CeoOrganizations from "./pages/ceo/CeoOrganizations";
 import CeoTasks from "./pages/ceo/CeoTasks";
 import CeoFinanceiro from "./pages/ceo/CeoFinanceiro";
 import CeoStakeholders from "./pages/ceo/CeoStakeholders";
+import CeoAgenda from "./pages/ceo/CeoAgenda";
+import CeoIniciativas from "./pages/ceo/CeoIniciativas";
+import CeoProjetos from "./pages/ceo/CeoProjetos";
+import CeoProdutos from "./pages/ceo/CeoProdutos";
+import CeoFiscal from "./pages/ceo/CeoFiscal";
 
 const queryClient = new QueryClient();
 
@@ -47,15 +52,15 @@ const App = () => (
               {/* CEO Routes */}
               <Route path="/ceo" element={<WithLayout><CeoDashboard /></WithLayout>} />
               <Route path="/ceo/radar" element={<WithLayout><CeoRadar /></WithLayout>} />
-              <Route path="/ceo/iniciativas" element={<WithLayout><CeoPlaceholder title="Iniciativas" description="Guarda-chuvas executivos do que está sendo feito." /></WithLayout>} />
-              <Route path="/ceo/projetos" element={<WithLayout><CeoPlaceholder title="Projetos" description="Esforços operacionais delimitados no tempo." /></WithLayout>} />
-              <Route path="/ceo/produtos" element={<WithLayout><CeoPlaceholder title="Produtos" description="Ativos replicáveis, comercializáveis ou escaláveis." /></WithLayout>} />
+              <Route path="/ceo/iniciativas" element={<WithLayout><CeoIniciativas /></WithLayout>} />
+              <Route path="/ceo/projetos" element={<WithLayout><CeoProjetos /></WithLayout>} />
+              <Route path="/ceo/produtos" element={<WithLayout><CeoProdutos /></WithLayout>} />
               <Route path="/ceo/organizacoes" element={<WithLayout><CeoOrganizations /></WithLayout>} />
               <Route path="/ceo/stakeholders" element={<WithLayout><CeoStakeholders /></WithLayout>} />
               <Route path="/ceo/tarefas" element={<WithLayout><CeoTasks /></WithLayout>} />
               <Route path="/ceo/financeiro" element={<WithLayout><CeoFinanceiro /></WithLayout>} />
-              <Route path="/ceo/agenda" element={<WithLayout><CeoPlaceholder title="Agenda" description="Compromissos e planejamento." /></WithLayout>} />
-              <Route path="/ceo/fiscal" element={<WithLayout><CeoPlaceholder title="Fiscal" description="Gestão fiscal e contábil." /></WithLayout>} />
+              <Route path="/ceo/agenda" element={<WithLayout><CeoAgenda /></WithLayout>} />
+              <Route path="/ceo/fiscal" element={<WithLayout><CeoFiscal /></WithLayout>} />
               <Route path="/ceo/infraestrutura" element={<WithLayout><CeoPlaceholder title="Infraestrutura" description="Controle dos ativos técnicos e operacionais." /></WithLayout>} />
               <Route path="/ceo/documentos" element={<WithLayout><CeoPlaceholder title="Documentos" description="Repositório documental central." /></WithLayout>} />
               <Route path="/ceo/modulos" element={<WithLayout><CeoPlaceholder title="Módulos ExudusTech" description="Mapeamento de modularidade e reaproveitamento." /></WithLayout>} />
