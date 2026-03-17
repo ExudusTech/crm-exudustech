@@ -21,6 +21,9 @@ import Settings from "./pages/Settings";
 // CEO pages
 import CeoDashboard from "./pages/ceo/CeoDashboard";
 import CeoPlaceholder from "./pages/ceo/CeoPlaceholder";
+import CeoRadar from "./pages/ceo/CeoRadar";
+import CeoOrganizations from "./pages/ceo/CeoOrganizations";
+import CeoTasks from "./pages/ceo/CeoTasks";
 
 const queryClient = new QueryClient();
 
