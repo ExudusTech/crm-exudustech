@@ -26,6 +26,11 @@ import CeoOrganizations from "./pages/ceo/CeoOrganizations";
 import CeoTasks from "./pages/ceo/CeoTasks";
 import CeoFinanceiro from "./pages/ceo/CeoFinanceiro";
 import CeoStakeholders from "./pages/ceo/CeoStakeholders";
+import CeoAgenda from "./pages/ceo/CeoAgenda";
+import CeoIniciativas from "./pages/ceo/CeoIniciativas";
+import CeoProjetos from "./pages/ceo/CeoProjetos";
+import CeoProdutos from "./pages/ceo/CeoProdutos";
+import CeoFiscal from "./pages/ceo/CeoFiscal";
 
 const queryClient = new QueryClient();
 
