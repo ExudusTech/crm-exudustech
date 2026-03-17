@@ -14,6 +14,446 @@ export type Database = {
   }
   public: {
     Tables: {
+      bank_accounts: {
+        Row: {
+          bank: string | null
+          committed_balance: number | null
+          created_at: string
+          current_balance: number | null
+          id: string
+          name: string
+          notes: string | null
+          status: Database["public"]["Enums"]["ceo_status"] | null
+          updated_at: string
+        }
+        Insert: {
+          bank?: string | null
+          committed_balance?: number | null
+          created_at?: string
+          current_balance?: number | null
+          id?: string
+          name: string
+          notes?: string | null
+          status?: Database["public"]["Enums"]["ceo_status"] | null
+          updated_at?: string
+        }
+        Update: {
+          bank?: string | null
+          committed_balance?: number | null
+          created_at?: string
+          current_balance?: number | null
+          id?: string
+          name?: string
+          notes?: string | null
+          status?: Database["public"]["Enums"]["ceo_status"] | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ceo_documents: {
+        Row: {
+          created_at: string
+          doc_type: Database["public"]["Enums"]["document_type"]
+          id: string
+          initiative_id: string | null
+          name: string
+          notes: string | null
+          organization_id: string | null
+          product_id: string | null
+          project_id: string | null
+          storage_path: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          doc_type?: Database["public"]["Enums"]["document_type"]
+          id?: string
+          initiative_id?: string | null
+          name: string
+          notes?: string | null
+          organization_id?: string | null
+          product_id?: string | null
+          project_id?: string | null
+          storage_path?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          doc_type?: Database["public"]["Enums"]["document_type"]
+          id?: string
+          initiative_id?: string | null
+          name?: string
+          notes?: string | null
+          organization_id?: string | null
+          product_id?: string | null
+          project_id?: string | null
+          storage_path?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ceo_documents_initiative_id_fkey"
+            columns: ["initiative_id"]
+            isOneToOne: false
+            referencedRelation: "initiatives"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ceo_documents_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ceo_documents_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ceo_documents_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ceo_events: {
+        Row: {
+          created_at: string
+          description: string | null
+          end_date: string | null
+          event_date: string
+          id: string
+          initiative_id: string | null
+          location: string | null
+          notes: string | null
+          project_id: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          end_date?: string | null
+          event_date: string
+          id?: string
+          initiative_id?: string | null
+          location?: string | null
+          notes?: string | null
+          project_id?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          end_date?: string | null
+          event_date?: string
+          id?: string
+          initiative_id?: string | null
+          location?: string | null
+          notes?: string | null
+          project_id?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ceo_events_initiative_id_fkey"
+            columns: ["initiative_id"]
+            isOneToOne: false
+            referencedRelation: "initiatives"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ceo_events_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ceo_tasks: {
+        Row: {
+          created_at: string
+          deadline: string | null
+          dependency: string | null
+          description: string | null
+          id: string
+          initiative_id: string | null
+          notes: string | null
+          priority: Database["public"]["Enums"]["priority_level"] | null
+          project_id: string | null
+          responsible: string | null
+          status: Database["public"]["Enums"]["task_status"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          deadline?: string | null
+          dependency?: string | null
+          description?: string | null
+          id?: string
+          initiative_id?: string | null
+          notes?: string | null
+          priority?: Database["public"]["Enums"]["priority_level"] | null
+          project_id?: string | null
+          responsible?: string | null
+          status?: Database["public"]["Enums"]["task_status"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          deadline?: string | null
+          dependency?: string | null
+          description?: string | null
+          id?: string
+          initiative_id?: string | null
+          notes?: string | null
+          priority?: Database["public"]["Enums"]["priority_level"] | null
+          project_id?: string | null
+          responsible?: string | null
+          status?: Database["public"]["Enums"]["task_status"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ceo_tasks_initiative_id_fkey"
+            columns: ["initiative_id"]
+            isOneToOne: false
+            referencedRelation: "initiatives"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ceo_tasks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      communication_requests: {
+        Row: {
+          channel: string
+          created_at: string
+          executed_at: string | null
+          execution_result: string | null
+          id: string
+          message_body: string | null
+          message_subject: string | null
+          related_entity_id: string | null
+          related_entity_type: string | null
+          requested_by: string | null
+          source_module: string
+          status: string | null
+          target_email: string | null
+          target_name: string | null
+          target_phone: string | null
+        }
+        Insert: {
+          channel: string
+          created_at?: string
+          executed_at?: string | null
+          execution_result?: string | null
+          id?: string
+          message_body?: string | null
+          message_subject?: string | null
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          requested_by?: string | null
+          source_module?: string
+          status?: string | null
+          target_email?: string | null
+          target_name?: string | null
+          target_phone?: string | null
+        }
+        Update: {
+          channel?: string
+          created_at?: string
+          executed_at?: string | null
+          execution_result?: string | null
+          id?: string
+          message_body?: string | null
+          message_subject?: string | null
+          related_entity_id?: string | null
+          related_entity_type?: string | null
+          requested_by?: string | null
+          source_module?: string
+          status?: string | null
+          target_email?: string | null
+          target_name?: string | null
+          target_phone?: string | null
+        }
+        Relationships: []
+      }
+      cost_centers: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      credentials_refs: {
+        Row: {
+          created_at: string
+          credential_type: string | null
+          id: string
+          infrastructure_id: string | null
+          name: string
+          notes: string | null
+          reference_hint: string | null
+          service: string
+          updated_at: string
+          vault_key: string | null
+        }
+        Insert: {
+          created_at?: string
+          credential_type?: string | null
+          id?: string
+          infrastructure_id?: string | null
+          name: string
+          notes?: string | null
+          reference_hint?: string | null
+          service: string
+          updated_at?: string
+          vault_key?: string | null
+        }
+        Update: {
+          created_at?: string
+          credential_type?: string | null
+          id?: string
+          infrastructure_id?: string | null
+          name?: string
+          notes?: string | null
+          reference_hint?: string | null
+          service?: string
+          updated_at?: string
+          vault_key?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credentials_refs_infrastructure_id_fkey"
+            columns: ["infrastructure_id"]
+            isOneToOne: false
+            referencedRelation: "infrastructures"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      credit_cards: {
+        Row: {
+          bank_account_id: string | null
+          created_at: string
+          due_day: number | null
+          id: string
+          name: string
+          notes: string | null
+          status: Database["public"]["Enums"]["ceo_status"] | null
+          total_limit: number | null
+          updated_at: string
+          used_limit: number | null
+        }
+        Insert: {
+          bank_account_id?: string | null
+          created_at?: string
+          due_day?: number | null
+          id?: string
+          name: string
+          notes?: string | null
+          status?: Database["public"]["Enums"]["ceo_status"] | null
+          total_limit?: number | null
+          updated_at?: string
+          used_limit?: number | null
+        }
+        Update: {
+          bank_account_id?: string | null
+          created_at?: string
+          due_day?: number | null
+          id?: string
+          name?: string
+          notes?: string | null
+          status?: Database["public"]["Enums"]["ceo_status"] | null
+          total_limit?: number | null
+          updated_at?: string
+          used_limit?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_cards_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      decisions: {
+        Row: {
+          created_at: string
+          decided_at: string
+          decided_by: string | null
+          description: string | null
+          id: string
+          impact: string | null
+          initiative_id: string | null
+          notes: string | null
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          decided_at?: string
+          decided_by?: string | null
+          description?: string | null
+          id?: string
+          impact?: string | null
+          initiative_id?: string | null
+          notes?: string | null
+          title: string
+        }
+        Update: {
+          created_at?: string
+          decided_at?: string
+          decided_by?: string | null
+          description?: string | null
+          id?: string
+          impact?: string | null
+          initiative_id?: string | null
+          notes?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "decisions_initiative_id_fkey"
+            columns: ["initiative_id"]
+            isOneToOne: false
+            referencedRelation: "initiatives"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       email_attachments: {
         Row: {
           content_hash: string | null
@@ -111,6 +551,391 @@ export type Database = {
             columns: ["lead_id"]
             isOneToOne: false
             referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expenses: {
+        Row: {
+          amount: number | null
+          category: string | null
+          cost_center_id: string | null
+          created_at: string
+          description: string | null
+          due_date: string | null
+          id: string
+          initiative_id: string | null
+          notes: string | null
+          paid_date: string | null
+          payment_method: string | null
+          product_id: string | null
+          project_id: string | null
+          recurrence: Database["public"]["Enums"]["recurrence_type"] | null
+          status: Database["public"]["Enums"]["financial_status"] | null
+          supplier: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount?: number | null
+          category?: string | null
+          cost_center_id?: string | null
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          initiative_id?: string | null
+          notes?: string | null
+          paid_date?: string | null
+          payment_method?: string | null
+          product_id?: string | null
+          project_id?: string | null
+          recurrence?: Database["public"]["Enums"]["recurrence_type"] | null
+          status?: Database["public"]["Enums"]["financial_status"] | null
+          supplier?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number | null
+          category?: string | null
+          cost_center_id?: string | null
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          initiative_id?: string | null
+          notes?: string | null
+          paid_date?: string | null
+          payment_method?: string | null
+          product_id?: string | null
+          project_id?: string | null
+          recurrence?: Database["public"]["Enums"]["recurrence_type"] | null
+          status?: Database["public"]["Enums"]["financial_status"] | null
+          supplier?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expenses_cost_center_id_fkey"
+            columns: ["cost_center_id"]
+            isOneToOne: false
+            referencedRelation: "cost_centers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_initiative_id_fkey"
+            columns: ["initiative_id"]
+            isOneToOne: false
+            referencedRelation: "initiatives"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fiscal_obligations: {
+        Row: {
+          amount: number | null
+          competence: string | null
+          created_at: string
+          due_date: string | null
+          id: string
+          notes: string | null
+          obligation_type: string
+          receipt_storage_path: string | null
+          status: Database["public"]["Enums"]["financial_status"] | null
+          updated_at: string
+        }
+        Insert: {
+          amount?: number | null
+          competence?: string | null
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          notes?: string | null
+          obligation_type: string
+          receipt_storage_path?: string | null
+          status?: Database["public"]["Enums"]["financial_status"] | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number | null
+          competence?: string | null
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          notes?: string | null
+          obligation_type?: string
+          receipt_storage_path?: string | null
+          status?: Database["public"]["Enums"]["financial_status"] | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      infrastructures: {
+        Row: {
+          assets: string | null
+          base_prompts: string | null
+          created_at: string
+          environments: string | null
+          functional_docs_url: string | null
+          github_url: string | null
+          id: string
+          initiative_id: string | null
+          integrations: string | null
+          linked_accounts: string | null
+          linked_emails: string | null
+          name: string
+          notes: string | null
+          product_id: string | null
+          project_id: string | null
+          reusable_modules: string | null
+          stack: string | null
+          technical_docs_url: string | null
+          updated_at: string
+          url_production: string | null
+          url_staging: string | null
+        }
+        Insert: {
+          assets?: string | null
+          base_prompts?: string | null
+          created_at?: string
+          environments?: string | null
+          functional_docs_url?: string | null
+          github_url?: string | null
+          id?: string
+          initiative_id?: string | null
+          integrations?: string | null
+          linked_accounts?: string | null
+          linked_emails?: string | null
+          name: string
+          notes?: string | null
+          product_id?: string | null
+          project_id?: string | null
+          reusable_modules?: string | null
+          stack?: string | null
+          technical_docs_url?: string | null
+          updated_at?: string
+          url_production?: string | null
+          url_staging?: string | null
+        }
+        Update: {
+          assets?: string | null
+          base_prompts?: string | null
+          created_at?: string
+          environments?: string | null
+          functional_docs_url?: string | null
+          github_url?: string | null
+          id?: string
+          initiative_id?: string | null
+          integrations?: string | null
+          linked_accounts?: string | null
+          linked_emails?: string | null
+          name?: string
+          notes?: string | null
+          product_id?: string | null
+          project_id?: string | null
+          reusable_modules?: string | null
+          stack?: string | null
+          technical_docs_url?: string | null
+          updated_at?: string
+          url_production?: string | null
+          url_staging?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "infrastructures_initiative_id_fkey"
+            columns: ["initiative_id"]
+            isOneToOne: false
+            referencedRelation: "initiatives"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "infrastructures_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "infrastructures_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      initiative_history: {
+        Row: {
+          content: string
+          created_at: string
+          entry_type: string
+          id: string
+          initiative_id: string
+          title: string | null
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          entry_type?: string
+          id?: string
+          initiative_id: string
+          title?: string | null
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          entry_type?: string
+          id?: string
+          initiative_id?: string
+          title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "initiative_history_initiative_id_fkey"
+            columns: ["initiative_id"]
+            isOneToOne: false
+            referencedRelation: "initiatives"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      initiative_stakeholders: {
+        Row: {
+          created_at: string
+          id: string
+          initiative_id: string
+          role: string | null
+          stakeholder_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          initiative_id: string
+          role?: string | null
+          stakeholder_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          initiative_id?: string
+          role?: string | null
+          stakeholder_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "initiative_stakeholders_initiative_id_fkey"
+            columns: ["initiative_id"]
+            isOneToOne: false
+            referencedRelation: "initiatives"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "initiative_stakeholders_stakeholder_id_fkey"
+            columns: ["stakeholder_id"]
+            isOneToOne: false
+            referencedRelation: "stakeholders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      initiatives: {
+        Row: {
+          created_at: string
+          deadline: string | null
+          description: string | null
+          id: string
+          main_risk: string | null
+          name: string
+          next_action: string | null
+          organization_id: string | null
+          partner_organization_id: string | null
+          pilot_organization_id: string | null
+          potential: string | null
+          priority: Database["public"]["Enums"]["priority_level"] | null
+          short_name: string | null
+          status: Database["public"]["Enums"]["ceo_status"]
+          strategic_asset_id: string | null
+          strategic_notes: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          deadline?: string | null
+          description?: string | null
+          id?: string
+          main_risk?: string | null
+          name: string
+          next_action?: string | null
+          organization_id?: string | null
+          partner_organization_id?: string | null
+          pilot_organization_id?: string | null
+          potential?: string | null
+          priority?: Database["public"]["Enums"]["priority_level"] | null
+          short_name?: string | null
+          status?: Database["public"]["Enums"]["ceo_status"]
+          strategic_asset_id?: string | null
+          strategic_notes?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          deadline?: string | null
+          description?: string | null
+          id?: string
+          main_risk?: string | null
+          name?: string
+          next_action?: string | null
+          organization_id?: string | null
+          partner_organization_id?: string | null
+          pilot_organization_id?: string | null
+          potential?: string | null
+          priority?: Database["public"]["Enums"]["priority_level"] | null
+          short_name?: string | null
+          status?: Database["public"]["Enums"]["ceo_status"]
+          strategic_asset_id?: string | null
+          strategic_notes?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "initiatives_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "initiatives_partner_organization_id_fkey"
+            columns: ["partner_organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "initiatives_pilot_organization_id_fkey"
+            columns: ["pilot_organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "initiatives_strategic_asset_id_fkey"
+            columns: ["strategic_asset_id"]
+            isOneToOne: false
+            referencedRelation: "strategic_assets"
             referencedColumns: ["id"]
           },
         ]
@@ -301,6 +1126,331 @@ export type Database = {
         }
         Relationships: []
       }
+      lessons_learned: {
+        Row: {
+          category: string | null
+          created_at: string
+          description: string | null
+          id: string
+          initiative_id: string | null
+          lesson_date: string | null
+          notes: string | null
+          project_id: string | null
+          title: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          initiative_id?: string | null
+          lesson_date?: string | null
+          notes?: string | null
+          project_id?: string | null
+          title: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          initiative_id?: string | null
+          lesson_date?: string | null
+          notes?: string | null
+          project_id?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lessons_learned_initiative_id_fkey"
+            columns: ["initiative_id"]
+            isOneToOne: false
+            referencedRelation: "initiatives"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lessons_learned_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      module_usages: {
+        Row: {
+          adaptation_notes: string | null
+          created_at: string
+          id: string
+          module_id: string
+          used_in_initiative_id: string | null
+          used_in_project_id: string | null
+        }
+        Insert: {
+          adaptation_notes?: string | null
+          created_at?: string
+          id?: string
+          module_id: string
+          used_in_initiative_id?: string | null
+          used_in_project_id?: string | null
+        }
+        Update: {
+          adaptation_notes?: string | null
+          created_at?: string
+          id?: string
+          module_id?: string
+          used_in_initiative_id?: string | null
+          used_in_project_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "module_usages_module_id_fkey"
+            columns: ["module_id"]
+            isOneToOne: false
+            referencedRelation: "modules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "module_usages_used_in_initiative_id_fkey"
+            columns: ["used_in_initiative_id"]
+            isOneToOne: false
+            referencedRelation: "initiatives"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "module_usages_used_in_project_id_fkey"
+            columns: ["used_in_project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      modules: {
+        Row: {
+          created_at: string
+          description: string | null
+          documentation_url: string | null
+          has_billing_layer: boolean | null
+          id: string
+          name: string
+          notes: string | null
+          origin_product_id: string | null
+          pluggability_score: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          documentation_url?: string | null
+          has_billing_layer?: boolean | null
+          id?: string
+          name: string
+          notes?: string | null
+          origin_product_id?: string | null
+          pluggability_score?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          documentation_url?: string | null
+          has_billing_layer?: boolean | null
+          id?: string
+          name?: string
+          notes?: string | null
+          origin_product_id?: string | null
+          pluggability_score?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "modules_origin_product_id_fkey"
+            columns: ["origin_product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organizations: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          notes: string | null
+          parent_organization_id: string | null
+          segment: string | null
+          short_name: string | null
+          status: Database["public"]["Enums"]["ceo_status"]
+          type: Database["public"]["Enums"]["organization_type"]
+          updated_at: string
+          website: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          notes?: string | null
+          parent_organization_id?: string | null
+          segment?: string | null
+          short_name?: string | null
+          status?: Database["public"]["Enums"]["ceo_status"]
+          type?: Database["public"]["Enums"]["organization_type"]
+          updated_at?: string
+          website?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          parent_organization_id?: string | null
+          segment?: string | null
+          short_name?: string | null
+          status?: Database["public"]["Enums"]["ceo_status"]
+          type?: Database["public"]["Enums"]["organization_type"]
+          updated_at?: string
+          website?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organizations_parent_organization_id_fkey"
+            columns: ["parent_organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      products: {
+        Row: {
+          benchmark: string | null
+          category: string | null
+          commercial_model: string | null
+          created_at: string
+          description: string | null
+          id: string
+          modularity_notes: string | null
+          name: string
+          notes: string | null
+          pilot_organization_id: string | null
+          price: number | null
+          status: Database["public"]["Enums"]["ceo_status"]
+          updated_at: string
+          value_message: string | null
+        }
+        Insert: {
+          benchmark?: string | null
+          category?: string | null
+          commercial_model?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          modularity_notes?: string | null
+          name: string
+          notes?: string | null
+          pilot_organization_id?: string | null
+          price?: number | null
+          status?: Database["public"]["Enums"]["ceo_status"]
+          updated_at?: string
+          value_message?: string | null
+        }
+        Update: {
+          benchmark?: string | null
+          category?: string | null
+          commercial_model?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          modularity_notes?: string | null
+          name?: string
+          notes?: string | null
+          pilot_organization_id?: string | null
+          price?: number | null
+          status?: Database["public"]["Enums"]["ceo_status"]
+          updated_at?: string
+          value_message?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_pilot_organization_id_fkey"
+            columns: ["pilot_organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projects: {
+        Row: {
+          created_at: string
+          end_date: string | null
+          id: string
+          initiative_id: string | null
+          main_risk: string | null
+          name: string
+          next_action: string | null
+          notes: string | null
+          priority: Database["public"]["Enums"]["priority_level"] | null
+          product_id: string | null
+          responsible: string | null
+          scope_summary: string | null
+          start_date: string | null
+          status: Database["public"]["Enums"]["ceo_status"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          initiative_id?: string | null
+          main_risk?: string | null
+          name: string
+          next_action?: string | null
+          notes?: string | null
+          priority?: Database["public"]["Enums"]["priority_level"] | null
+          product_id?: string | null
+          responsible?: string | null
+          scope_summary?: string | null
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["ceo_status"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          initiative_id?: string | null
+          main_risk?: string | null
+          name?: string
+          next_action?: string | null
+          notes?: string | null
+          priority?: Database["public"]["Enums"]["priority_level"] | null
+          product_id?: string | null
+          responsible?: string | null
+          scope_summary?: string | null
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["ceo_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projects_initiative_id_fkey"
+            columns: ["initiative_id"]
+            isOneToOne: false
+            referencedRelation: "initiatives"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "projects_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       prompt_templates: {
         Row: {
           custom_prompt: string
@@ -315,6 +1465,276 @@ export type Database = {
         Update: {
           custom_prompt?: string
           id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      revenues: {
+        Row: {
+          cost_center_id: string | null
+          created_at: string
+          description: string | null
+          due_date: string | null
+          expected_amount: number | null
+          id: string
+          initiative_id: string | null
+          invoice_number: string | null
+          notes: string | null
+          organization_id: string | null
+          payment_method: string | null
+          product_id: string | null
+          project_id: string | null
+          received_amount: number | null
+          received_date: string | null
+          status: Database["public"]["Enums"]["financial_status"] | null
+          updated_at: string
+        }
+        Insert: {
+          cost_center_id?: string | null
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          expected_amount?: number | null
+          id?: string
+          initiative_id?: string | null
+          invoice_number?: string | null
+          notes?: string | null
+          organization_id?: string | null
+          payment_method?: string | null
+          product_id?: string | null
+          project_id?: string | null
+          received_amount?: number | null
+          received_date?: string | null
+          status?: Database["public"]["Enums"]["financial_status"] | null
+          updated_at?: string
+        }
+        Update: {
+          cost_center_id?: string | null
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          expected_amount?: number | null
+          id?: string
+          initiative_id?: string | null
+          invoice_number?: string | null
+          notes?: string | null
+          organization_id?: string | null
+          payment_method?: string | null
+          product_id?: string | null
+          project_id?: string | null
+          received_amount?: number | null
+          received_date?: string | null
+          status?: Database["public"]["Enums"]["financial_status"] | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "revenues_cost_center_id_fkey"
+            columns: ["cost_center_id"]
+            isOneToOne: false
+            referencedRelation: "cost_centers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "revenues_initiative_id_fkey"
+            columns: ["initiative_id"]
+            isOneToOne: false
+            referencedRelation: "initiatives"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "revenues_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "revenues_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "revenues_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stakeholders: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          name: string
+          notes: string | null
+          organization_id: string | null
+          phone: string | null
+          role_title: string | null
+          stakeholder_type: Database["public"]["Enums"]["stakeholder_type"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          organization_id?: string | null
+          phone?: string | null
+          role_title?: string | null
+          stakeholder_type?: Database["public"]["Enums"]["stakeholder_type"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          organization_id?: string | null
+          phone?: string | null
+          role_title?: string | null
+          stakeholder_type?: Database["public"]["Enums"]["stakeholder_type"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stakeholders_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      strategic_assets: {
+        Row: {
+          asset_type: Database["public"]["Enums"]["strategic_asset_type"]
+          created_at: string
+          deadline: string | null
+          description: string | null
+          id: string
+          main_risk: string | null
+          name: string
+          next_action: string | null
+          organization_id: string | null
+          partner_organization_id: string | null
+          pilot_organization_id: string | null
+          potential: string | null
+          priority: Database["public"]["Enums"]["priority_level"] | null
+          short_name: string | null
+          status: Database["public"]["Enums"]["ceo_status"]
+          strategic_notes: string | null
+          updated_at: string
+        }
+        Insert: {
+          asset_type?: Database["public"]["Enums"]["strategic_asset_type"]
+          created_at?: string
+          deadline?: string | null
+          description?: string | null
+          id?: string
+          main_risk?: string | null
+          name: string
+          next_action?: string | null
+          organization_id?: string | null
+          partner_organization_id?: string | null
+          pilot_organization_id?: string | null
+          potential?: string | null
+          priority?: Database["public"]["Enums"]["priority_level"] | null
+          short_name?: string | null
+          status?: Database["public"]["Enums"]["ceo_status"]
+          strategic_notes?: string | null
+          updated_at?: string
+        }
+        Update: {
+          asset_type?: Database["public"]["Enums"]["strategic_asset_type"]
+          created_at?: string
+          deadline?: string | null
+          description?: string | null
+          id?: string
+          main_risk?: string | null
+          name?: string
+          next_action?: string | null
+          organization_id?: string | null
+          partner_organization_id?: string | null
+          pilot_organization_id?: string | null
+          potential?: string | null
+          priority?: Database["public"]["Enums"]["priority_level"] | null
+          short_name?: string | null
+          status?: Database["public"]["Enums"]["ceo_status"]
+          strategic_notes?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "strategic_assets_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "strategic_assets_partner_organization_id_fkey"
+            columns: ["partner_organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "strategic_assets_pilot_organization_id_fkey"
+            columns: ["pilot_organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscriptions: {
+        Row: {
+          annual_amount: number | null
+          billing_day: number | null
+          category: string | null
+          created_at: string
+          criticality: Database["public"]["Enums"]["priority_level"] | null
+          id: string
+          monthly_amount: number | null
+          notes: string | null
+          payment_method: string | null
+          service_name: string
+          status: Database["public"]["Enums"]["ceo_status"] | null
+          updated_at: string
+        }
+        Insert: {
+          annual_amount?: number | null
+          billing_day?: number | null
+          category?: string | null
+          created_at?: string
+          criticality?: Database["public"]["Enums"]["priority_level"] | null
+          id?: string
+          monthly_amount?: number | null
+          notes?: string | null
+          payment_method?: string | null
+          service_name: string
+          status?: Database["public"]["Enums"]["ceo_status"] | null
+          updated_at?: string
+        }
+        Update: {
+          annual_amount?: number | null
+          billing_day?: number | null
+          category?: string | null
+          created_at?: string
+          criticality?: Database["public"]["Enums"]["priority_level"] | null
+          id?: string
+          monthly_amount?: number | null
+          notes?: string | null
+          payment_method?: string | null
+          service_name?: string
+          status?: Database["public"]["Enums"]["ceo_status"] | null
           updated_at?: string
         }
         Relationships: []
@@ -389,6 +1809,34 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
+      ceo_status:
+        | "ativo"
+        | "pausado"
+        | "concluido"
+        | "cancelado"
+        | "em_analise"
+        | "arquivado"
+      document_type:
+        | "contrato"
+        | "proposta"
+        | "apresentacao"
+        | "relatorio"
+        | "parecer"
+        | "nota_fiscal"
+        | "documento_fiscal"
+        | "extrato"
+        | "gravacao"
+        | "material_marketing"
+        | "print"
+        | "anexo_tecnico"
+        | "outro"
+      financial_status:
+        | "pendente"
+        | "pago"
+        | "recebido"
+        | "atrasado"
+        | "cancelado"
+        | "parcial"
       lead_status:
         | "em_negociacao"
         | "ganho"
@@ -396,6 +1844,45 @@ export type Database = {
         | "entregue"
         | "em_aberto"
         | "produzido"
+      organization_type:
+        | "cliente"
+        | "parceiro"
+        | "piloto"
+        | "instituicao"
+        | "organizacao_mae"
+        | "unidade"
+        | "interno"
+      priority_level: "critica" | "alta" | "media" | "baixa"
+      recurrence_type:
+        | "mensal"
+        | "trimestral"
+        | "semestral"
+        | "anual"
+        | "avulso"
+      stakeholder_type:
+        | "decisor"
+        | "operacional"
+        | "tecnico"
+        | "comercial"
+        | "aprovador"
+        | "consultor"
+        | "outro"
+      strategic_asset_type:
+        | "ideia"
+        | "oportunidade"
+        | "sistema"
+        | "agente"
+        | "produto"
+        | "framework"
+        | "ativo_adquirido"
+        | "ativo_conhecimento"
+      task_status:
+        | "todo"
+        | "doing"
+        | "done"
+        | "bloqueado"
+        | "aguardando_terceiro"
+        | "pausado"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -523,6 +2010,37 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      ceo_status: [
+        "ativo",
+        "pausado",
+        "concluido",
+        "cancelado",
+        "em_analise",
+        "arquivado",
+      ],
+      document_type: [
+        "contrato",
+        "proposta",
+        "apresentacao",
+        "relatorio",
+        "parecer",
+        "nota_fiscal",
+        "documento_fiscal",
+        "extrato",
+        "gravacao",
+        "material_marketing",
+        "print",
+        "anexo_tecnico",
+        "outro",
+      ],
+      financial_status: [
+        "pendente",
+        "pago",
+        "recebido",
+        "atrasado",
+        "cancelado",
+        "parcial",
+      ],
       lead_status: [
         "em_negociacao",
         "ganho",
@@ -530,6 +2048,44 @@ export const Constants = {
         "entregue",
         "em_aberto",
         "produzido",
+      ],
+      organization_type: [
+        "cliente",
+        "parceiro",
+        "piloto",
+        "instituicao",
+        "organizacao_mae",
+        "unidade",
+        "interno",
+      ],
+      priority_level: ["critica", "alta", "media", "baixa"],
+      recurrence_type: ["mensal", "trimestral", "semestral", "anual", "avulso"],
+      stakeholder_type: [
+        "decisor",
+        "operacional",
+        "tecnico",
+        "comercial",
+        "aprovador",
+        "consultor",
+        "outro",
+      ],
+      strategic_asset_type: [
+        "ideia",
+        "oportunidade",
+        "sistema",
+        "agente",
+        "produto",
+        "framework",
+        "ativo_adquirido",
+        "ativo_conhecimento",
+      ],
+      task_status: [
+        "todo",
+        "doing",
+        "done",
+        "bloqueado",
+        "aguardando_terceiro",
+        "pausado",
       ],
     },
   },
