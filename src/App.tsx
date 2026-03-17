@@ -21,6 +21,9 @@ import Settings from "./pages/Settings";
 // CEO pages
 import CeoDashboard from "./pages/ceo/CeoDashboard";
 import CeoPlaceholder from "./pages/ceo/CeoPlaceholder";
+import CeoRadar from "./pages/ceo/CeoRadar";
+import CeoOrganizations from "./pages/ceo/CeoOrganizations";
+import CeoTasks from "./pages/ceo/CeoTasks";
 
 const queryClient = new QueryClient();
 
@@ -41,13 +44,13 @@ const App = () => (
 
               {/* CEO Routes */}
               <Route path="/ceo" element={<WithLayout><CeoDashboard /></WithLayout>} />
-              <Route path="/ceo/radar" element={<WithLayout><CeoPlaceholder title="Radar Estratégico" description="Visão executiva de todos os itens do ecossistema." /></WithLayout>} />
+              <Route path="/ceo/radar" element={<WithLayout><CeoRadar /></WithLayout>} />
               <Route path="/ceo/iniciativas" element={<WithLayout><CeoPlaceholder title="Iniciativas" description="Guarda-chuvas executivos do que está sendo feito." /></WithLayout>} />
               <Route path="/ceo/projetos" element={<WithLayout><CeoPlaceholder title="Projetos" description="Esforços operacionais delimitados no tempo." /></WithLayout>} />
               <Route path="/ceo/produtos" element={<WithLayout><CeoPlaceholder title="Produtos" description="Ativos replicáveis, comercializáveis ou escaláveis." /></WithLayout>} />
-              <Route path="/ceo/organizacoes" element={<WithLayout><CeoPlaceholder title="Organizações" description="Clientes, parceiros, instituições e pilotos." /></WithLayout>} />
+              <Route path="/ceo/organizacoes" element={<WithLayout><CeoOrganizations /></WithLayout>} />
               <Route path="/ceo/stakeholders" element={<WithLayout><CeoPlaceholder title="Stakeholders" description="Pessoas relacionadas a decisão, operação e aprovação." /></WithLayout>} />
-              <Route path="/ceo/tarefas" element={<WithLayout><CeoPlaceholder title="Tarefas" description="Gestão operacional detalhada com Kanban." /></WithLayout>} />
+              <Route path="/ceo/tarefas" element={<WithLayout><CeoTasks /></WithLayout>} />
               <Route path="/ceo/agenda" element={<WithLayout><CeoPlaceholder title="Agenda" description="Compromissos e planejamento." /></WithLayout>} />
               <Route path="/ceo/financeiro" element={<WithLayout><CeoPlaceholder title="Financeiro" description="Gestão financeira empresarial." /></WithLayout>} />
               <Route path="/ceo/fiscal" element={<WithLayout><CeoPlaceholder title="Fiscal" description="Gestão fiscal e contábil." /></WithLayout>} />
