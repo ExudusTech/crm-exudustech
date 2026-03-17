@@ -52,7 +52,6 @@ const App = () => (
               <Route path="/ceo/produtos" element={<WithLayout><CeoPlaceholder title="Produtos" description="Ativos replicáveis, comercializáveis ou escaláveis." /></WithLayout>} />
               <Route path="/ceo/organizacoes" element={<WithLayout><CeoOrganizations /></WithLayout>} />
               <Route path="/ceo/stakeholders" element={<WithLayout><CeoStakeholders /></WithLayout>} />
-              <Route path="/ceo/organizacoes" element={<WithLayout><CeoOrganizations /></WithLayout>} />
               <Route path="/ceo/tarefas" element={<WithLayout><CeoTasks /></WithLayout>} />
               <Route path="/ceo/financeiro" element={<WithLayout><CeoFinanceiro /></WithLayout>} />
               <Route path="/ceo/agenda" element={<WithLayout><CeoPlaceholder title="Agenda" description="Compromissos e planejamento." /></WithLayout>} />
