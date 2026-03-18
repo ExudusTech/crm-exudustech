@@ -6,6 +6,21 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+async function logAction(supabase: any, entityName: string, entityId: string | null, actionType: string, source: string, description: string, newValue?: any) {
+  try {
+    await supabase.from("audit_logs").insert({
+      entity_name: entityName,
+      entity_id: entityId,
+      action_type: actionType,
+      source,
+      description,
+      new_value: newValue ? JSON.stringify(newValue) : null,
+    });
+  } catch (e) {
+    console.error("Audit log error:", e);
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -53,6 +68,12 @@ REGRAS DE CADASTRO ASSISTIDO:
 5. Após confirmação, execute as criações e vincule as entidades
 6. Confirme o que foi feito
 
+IMPORTANTE - FLUXO DE CONFIRMAÇÃO:
+- Quando o usuário pedir para criar algo, PRIMEIRO apresente um resumo organizado do que será criado
+- Pergunte "Confirma o cadastro?" 
+- SÓ execute as tool calls DEPOIS que o usuário confirmar (ex: "sim", "confirma", "ok", "pode criar")
+- Se o usuário não confirmar, pergunte o que deseja ajustar
+
 CONTEXTO ATUAL DO SISTEMA:
 ${contextStr}
 
@@ -80,7 +101,7 @@ FORMATO DE RESPOSTA:
               main_risk: { type: "string" },
               potential: { type: "string" },
               deadline: { type: "string", description: "YYYY-MM-DD" },
-              organization_id: { type: "string", description: "UUID of existing org" },
+              organization_id: { type: "string" },
               partner_organization_id: { type: "string" },
               pilot_organization_id: { type: "string" },
             },
@@ -215,37 +236,55 @@ FORMATO DE RESPOSTA:
             case "create_initiative": {
               const { data, error } = await supabase.from("initiatives").insert(args).select("id, name").single();
               result = error ? { success: false, error: error.message } : { success: true, id: data.id, name: data.name };
-              if (data) createdEntities.push(`Iniciativa "${data.name}" (${data.id})`);
+              if (data) {
+                createdEntities.push(`Iniciativa "${data.name}" (${data.id})`);
+                await logAction(supabase, "initiatives", data.id, "create", "ia_assistant", `IA criou iniciativa "${data.name}"`, args);
+              }
               break;
             }
             case "create_organization": {
               const { data, error } = await supabase.from("organizations").insert(args).select("id, name").single();
               result = error ? { success: false, error: error.message } : { success: true, id: data.id, name: data.name };
-              if (data) createdEntities.push(`Organização "${data.name}" (${data.id})`);
+              if (data) {
+                createdEntities.push(`Organização "${data.name}" (${data.id})`);
+                await logAction(supabase, "organizations", data.id, "create", "ia_assistant", `IA criou organização "${data.name}"`, args);
+              }
               break;
             }
             case "create_stakeholder": {
               const { data, error } = await supabase.from("stakeholders").insert(args).select("id, name").single();
               result = error ? { success: false, error: error.message } : { success: true, id: data.id, name: data.name };
-              if (data) createdEntities.push(`Stakeholder "${data.name}" (${data.id})`);
+              if (data) {
+                createdEntities.push(`Stakeholder "${data.name}" (${data.id})`);
+                await logAction(supabase, "stakeholders", data.id, "create", "ia_assistant", `IA criou stakeholder "${data.name}"`, args);
+              }
               break;
             }
             case "create_task": {
               const { data, error } = await supabase.from("ceo_tasks").insert(args).select("id, title").single();
               result = error ? { success: false, error: error.message } : { success: true, id: data.id, title: data.title };
-              if (data) createdEntities.push(`Tarefa "${data.title}" (${data.id})`);
+              if (data) {
+                createdEntities.push(`Tarefa "${data.title}" (${data.id})`);
+                await logAction(supabase, "ceo_tasks", data.id, "create", "ia_assistant", `IA criou tarefa "${data.title}"`, args);
+              }
               break;
             }
             case "create_project": {
               const { data, error } = await supabase.from("projects").insert(args).select("id, name").single();
               result = error ? { success: false, error: error.message } : { success: true, id: data.id, name: data.name };
-              if (data) createdEntities.push(`Projeto "${data.name}" (${data.id})`);
+              if (data) {
+                createdEntities.push(`Projeto "${data.name}" (${data.id})`);
+                await logAction(supabase, "projects", data.id, "create", "ia_assistant", `IA criou projeto "${data.name}"`, args);
+              }
               break;
             }
             case "link_stakeholder_to_initiative": {
               const { error } = await supabase.from("initiative_stakeholders").insert(args);
               result = error ? { success: false, error: error.message } : { success: true };
-              if (!error) createdEntities.push(`Vínculo stakeholder-iniciativa criado`);
+              if (!error) {
+                createdEntities.push(`Vínculo stakeholder-iniciativa criado`);
+                await logAction(supabase, "initiative_stakeholders", null, "create", "ia_assistant", `IA vinculou stakeholder à iniciativa`, args);
+              }
               break;
             }
           }

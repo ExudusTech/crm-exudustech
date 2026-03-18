@@ -3,6 +3,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { GlobalSearch } from "@/components/ceo/GlobalSearch";
+import { VoiceAssistant } from "@/components/ceo/VoiceAssistant";
 import { Button } from "@/components/ui/button";
 import { Search } from "lucide-react";
 
