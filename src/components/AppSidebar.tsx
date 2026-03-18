@@ -94,18 +94,18 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader className="p-0">
+      <SidebarHeader className="p-0 overflow-hidden">
         <div
           onClick={() => navigate("/ceo")}
-          className="cursor-pointer flex flex-col items-center gap-1 px-2 py-3"
+          className="cursor-pointer flex flex-col items-center"
         >
           <img
             src={exudusLogo}
             alt="ExudusTech"
-            className={collapsed ? "h-8 w-8 rounded-md object-cover" : "w-full max-h-16 object-contain rounded-md"}
+            className={collapsed ? "h-8 w-8 object-cover" : "w-full h-auto object-cover"}
           />
           {!collapsed && (
-            <span className="text-xs text-muted-foreground">Sistema CEO</span>
+            <span className="text-[10px] tracking-widest uppercase text-muted-foreground pb-2 pt-1">Sistema CEO</span>
           )}
         </div>
       </SidebarHeader>
