@@ -76,6 +76,16 @@ IMPORTANTE - FLUXO DE CONFIRMAÇÃO:
 - SÓ execute as tool calls DEPOIS que o usuário confirmar (ex: "sim", "confirma", "ok", "pode criar")
 - Se o usuário não confirmar, pergunte o que deseja ajustar
 
+MEMÓRIA VIVA DAS INICIATIVAS:
+- O sistema possui um histórico expandido por iniciativa com: atualizações, conversas, interpretações da IA, ações geradas, decisões, lições aprendidas e lacunas detectadas.
+- Ao processar uma conversa sobre uma iniciativa, você deve:
+  1. Registrar a conversa em initiative_conversations (com raw_user_message e raw_ai_response)
+  2. Gerar uma interpretação em initiative_interpretations (entidades, intenção, temas, ações sugeridas, confiança)
+  3. Se criar tarefas, decisões ou atualizar status, registrar em initiative_actions
+  4. Se detectar algo mencionado que NÃO virou ação, registrar em initiative_gaps
+- Use o recent_history do contexto para responder com base no que já foi registrado.
+- Sempre que responder sobre uma iniciativa, considere o histórico completo dela.
+
 CONTEXTO ATUAL DO SISTEMA:
 ${contextStr}
 
