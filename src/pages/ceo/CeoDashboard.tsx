@@ -214,6 +214,47 @@ const CeoDashboard = () => {
         </Card>
       </div>
 
+      {/* Agenda do dia + Lições */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader><CardTitle className="flex items-center gap-2 text-base"><CalendarDays className="h-4 w-4" /> Agenda de Hoje</CardTitle></CardHeader>
+          <CardContent>
+            {todayEvents.length === 0 ? (
+              <div className="flex items-center justify-center h-20 text-muted-foreground text-sm">Sem compromissos hoje</div>
+            ) : (
+              <div className="space-y-2">
+                {todayEvents.map((e: any) => (
+                  <div key={e.id} className="flex items-center justify-between border rounded-md p-3">
+                    <div>
+                      <p className="text-sm font-medium">{e.title}</p>
+                      {e.location && <p className="text-xs text-muted-foreground">{e.location}</p>}
+                    </div>
+                    <span className="text-xs text-muted-foreground">{new Date(e.event_date).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader><CardTitle className="flex items-center gap-2 text-base"><TrendingUp className="h-4 w-4" /> Lições Recentes</CardTitle></CardHeader>
+          <CardContent>
+            {recentLessons.length === 0 ? (
+              <div className="flex items-center justify-center h-20 text-muted-foreground text-sm">Nenhuma lição registrada</div>
+            ) : (
+              <div className="space-y-2">
+                {recentLessons.map((l: any) => (
+                  <div key={l.id} className="flex items-center justify-between border rounded-md p-3">
+                    <p className="text-sm font-medium">{l.title}</p>
+                    {l.category && <Badge variant="outline" className="text-xs">{l.category}</Badge>}
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Quick Actions */}
       <Card>
         <CardHeader><CardTitle className="text-base">Atalhos Rápidos</CardTitle></CardHeader>
