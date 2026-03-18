@@ -450,131 +450,20 @@ const CeoInitiativeDetail = () => {
           </div>
         </TabsContent>
 
-        {/* HISTÓRICO + DECISÕES + LIÇÕES */}
-        <TabsContent value="history" className="space-y-4">
-          <div className="flex justify-end gap-2">
-            <Button size="sm" variant="outline" onClick={() => setHistoryDialog(true)}><Plus className="h-4 w-4 mr-1" /> Registrar Atualização</Button>
-          </div>
-
-          {/* Timeline */}
-          <Card>
-            <CardHeader><CardTitle className="text-base flex items-center gap-2"><Clock className="h-4 w-4" /> Atualizações</CardTitle></CardHeader>
-            <CardContent>
-              {history.length === 0 ? <p className="text-sm text-muted-foreground text-center py-4">Nenhuma atualização.</p> : (
-                <div className="space-y-3">
-                  {history.map(h => (
-                    <div key={h.id} className="border-l-2 border-primary pl-4 py-1">
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="text-xs">{h.entry_type}</Badge>
-                        <span className="text-xs text-muted-foreground">{new Date(h.created_at).toLocaleString("pt-BR")}</span>
-                      </div>
-                      {h.title && <p className="font-medium text-sm">{h.title}</p>}
-                      <p className="text-sm text-muted-foreground">{h.content}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Decisions */}
-          <Card>
-            <CardHeader><CardTitle className="text-base flex items-center gap-2"><Lightbulb className="h-4 w-4" /> Decisões</CardTitle></CardHeader>
-            <CardContent>
-              {decisions.length === 0 ? <p className="text-sm text-muted-foreground text-center py-4">Nenhuma decisão registrada.</p> : (
-                <div className="space-y-2">
-                  {decisions.map(d => (
-                    <div key={d.id} className="border rounded-md p-3">
-                      <p className="font-medium text-sm">{d.title}</p>
-                      {d.description && <p className="text-sm text-muted-foreground">{d.description}</p>}
-                      {d.impact && <p className="text-xs mt-1"><span className="font-medium">Impacto:</span> {d.impact}</p>}
-                      <p className="text-xs text-muted-foreground mt-1">{new Date(d.decided_at).toLocaleDateString("pt-BR")} · {d.decided_by || "—"}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Lessons */}
-          <Card>
-            <CardHeader><CardTitle className="text-base flex items-center gap-2"><BookOpen className="h-4 w-4" /> Lições Aprendidas</CardTitle></CardHeader>
-            <CardContent>
-              {lessons.length === 0 ? <p className="text-sm text-muted-foreground text-center py-4">Nenhuma lição registrada.</p> : (
-                <div className="space-y-2">
-                  {lessons.map(l => (
-                    <div key={l.id} className="border rounded-md p-3">
-                      <p className="font-medium text-sm">{l.title}</p>
-                      {l.description && <p className="text-sm text-muted-foreground">{l.description}</p>}
-                      {l.category && <Badge variant="outline" className="text-xs mt-1">{l.category}</Badge>}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+        {/* HISTÓRICO — TIMELINE UNIFICADA */}
+        <TabsContent value="history">
+          <InitiativeTimeline
+            initiativeId={id!}
+            history={history}
+            decisions={decisions}
+            lessons={lessons}
+            conversations={conversations}
+            interpretations={interpretations}
+            actions={initiativeActions}
+            gaps={initiativeGaps}
+            onRefresh={fetchAll}
+          />
         </TabsContent>
-
-        {/* MÓDULOS */}
-        <TabsContent value="modules">
-          <Card>
-            <CardHeader><CardTitle className="text-base flex items-center gap-2"><Puzzle className="h-4 w-4" /> Módulos Relacionados</CardTitle></CardHeader>
-            <CardContent>
-              {modules.length === 0 ? <p className="text-sm text-muted-foreground text-center py-4">Nenhum módulo vinculado.</p> : (
-                <div className="space-y-2">
-                  {modules.map(m => (
-                    <div key={m.id} className="border rounded-md p-3">
-                      <p className="font-medium text-sm">{m.modules?.name || "—"}</p>
-                      {m.adaptation_notes && <p className="text-sm text-muted-foreground">{m.adaptation_notes}</p>}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* EXPORTAR CONTEXTO */}
-        <TabsContent value="export">
-          <Card>
-            <CardHeader><CardTitle className="text-base flex items-center gap-2"><Download className="h-4 w-4" /> Contexto Exportável</CardTitle></CardHeader>
-            <CardContent className="space-y-3">
-              <p className="text-sm text-muted-foreground">Exporte todo o contexto desta iniciativa em diferentes formatos.</p>
-              <div className="flex gap-3">
-                <Button variant="outline" onClick={() => exportContext("json")}><Copy className="h-4 w-4 mr-2" /> JSON</Button>
-                <Button variant="outline" onClick={() => exportContext("markdown")}><FileText className="h-4 w-4 mr-2" /> Markdown</Button>
-                <Button variant="outline" onClick={() => exportContext("txt")}><FileText className="h-4 w-4 mr-2" /> TXT</Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-
-      {/* History Entry Dialog */}
-      <Dialog open={historyDialog} onOpenChange={setHistoryDialog}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Registrar Atualização</DialogTitle></DialogHeader>
-          <div className="space-y-3">
-            <div><Label>Tipo</Label>
-              <Select value={historyForm.entry_type} onValueChange={v => setHistoryForm({ ...historyForm, entry_type: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="atualizacao">Atualização</SelectItem>
-                  <SelectItem value="reuniao">Reunião</SelectItem>
-                  <SelectItem value="decisao">Decisão</SelectItem>
-                  <SelectItem value="marco">Marco</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div><Label>Título (opcional)</Label><Input value={historyForm.title} onChange={e => setHistoryForm({ ...historyForm, title: e.target.value })} /></div>
-            <div><Label>Conteúdo *</Label><Textarea value={historyForm.content} onChange={e => setHistoryForm({ ...historyForm, content: e.target.value })} rows={4} /></div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setHistoryDialog(false)}>Cancelar</Button>
-            <Button onClick={addHistoryEntry} disabled={!historyForm.content.trim()}>Salvar</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
