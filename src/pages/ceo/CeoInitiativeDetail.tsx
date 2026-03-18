@@ -43,6 +43,10 @@ const CeoInitiativeDetail = () => {
   const [decisions, setDecisions] = useState<any[]>([]);
   const [lessons, setLessons] = useState<any[]>([]);
   const [modules, setModules] = useState<any[]>([]);
+  const [conversations, setConversations] = useState<any[]>([]);
+  const [interpretations, setInterpretations] = useState<any[]>([]);
+  const [initiativeActions, setInitiativeActions] = useState<any[]>([]);
+  const [initiativeGaps, setInitiativeGaps] = useState<any[]>([]);
   const [relatedOrgs, setRelatedOrgs] = useState<{ main?: any; partner?: any; pilot?: any }>({});
   const [relatedProjects, setRelatedProjects] = useState<any[]>([]);
   const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
