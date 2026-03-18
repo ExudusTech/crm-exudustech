@@ -19,7 +19,8 @@ serve(async (req) => {
 
   try {
     const url = new URL(req.url);
-    const action = url.searchParams.get("action") || (await req.json().catch(() => ({}))).action;
+    const body = await req.json().catch(() => ({}));
+    const action = url.searchParams.get("action") || body.action;
 
     const CLIENT_ID = Deno.env.get("GOOGLE_CLIENT_ID");
     const CLIENT_SECRET = Deno.env.get("GOOGLE_CLIENT_SECRET");
@@ -35,7 +36,6 @@ serve(async (req) => {
 
     // Generate OAuth URL
     if (action === "get_auth_url") {
-      const body = await req.json().catch(() => ({}));
       const redirectUri = body.redirect_uri;
       const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
         `client_id=${CLIENT_ID}` +
