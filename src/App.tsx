@@ -65,10 +65,10 @@ const App = () => (
               <Route path="/ceo/financeiro" element={<WithLayout><CeoFinanceiro /></WithLayout>} />
               <Route path="/ceo/agenda" element={<WithLayout><CeoAgenda /></WithLayout>} />
               <Route path="/ceo/fiscal" element={<WithLayout><CeoFiscal /></WithLayout>} />
-              <Route path="/ceo/infraestrutura" element={<WithLayout><CeoPlaceholder title="Infraestrutura" description="Controle dos ativos técnicos e operacionais." /></WithLayout>} />
-              <Route path="/ceo/documentos" element={<WithLayout><CeoPlaceholder title="Documentos" description="Repositório documental central." /></WithLayout>} />
-              <Route path="/ceo/modulos" element={<WithLayout><CeoPlaceholder title="Módulos ExudusTech" description="Mapeamento de modularidade e reaproveitamento." /></WithLayout>} />
-              <Route path="/ceo/ia" element={<WithLayout><CeoPlaceholder title="IA / Assistente CEO" description="Área conversacional do sistema." /></WithLayout>} />
+              <Route path="/ceo/infraestrutura" element={<WithLayout><CeoInfraestrutura /></WithLayout>} />
+              <Route path="/ceo/documentos" element={<WithLayout><CeoDocumentos /></WithLayout>} />
+              <Route path="/ceo/modulos" element={<WithLayout><CeoModulos /></WithLayout>} />
+              <Route path="/ceo/ia" element={<WithLayout><CeoIA /></WithLayout>} />
 
               {/* CRM Routes (preserved) */}
               <Route path="/crm" element={<WithLayout><Opportunities /></WithLayout>} />
