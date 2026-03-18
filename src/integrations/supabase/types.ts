@@ -719,6 +719,99 @@ export type Database = {
         }
         Relationships: []
       }
+      google_connections: {
+        Row: {
+          access_token: string
+          connected_at: string | null
+          created_at: string | null
+          email: string
+          id: string
+          last_sync_at: string | null
+          refresh_token: string | null
+          scopes: string[] | null
+          status: string
+          token_expires_at: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          access_token: string
+          connected_at?: string | null
+          created_at?: string | null
+          email: string
+          id?: string
+          last_sync_at?: string | null
+          refresh_token?: string | null
+          scopes?: string[] | null
+          status?: string
+          token_expires_at?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          access_token?: string
+          connected_at?: string | null
+          created_at?: string | null
+          email?: string
+          id?: string
+          last_sync_at?: string | null
+          refresh_token?: string | null
+          scopes?: string[] | null
+          status?: string
+          token_expires_at?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      google_sync_logs: {
+        Row: {
+          action: string
+          connection_id: string | null
+          created_at: string | null
+          details: string | null
+          id: string
+          initiative_id: string | null
+          service: string
+          status: string | null
+        }
+        Insert: {
+          action: string
+          connection_id?: string | null
+          created_at?: string | null
+          details?: string | null
+          id?: string
+          initiative_id?: string | null
+          service: string
+          status?: string | null
+        }
+        Update: {
+          action?: string
+          connection_id?: string | null
+          created_at?: string | null
+          details?: string | null
+          id?: string
+          initiative_id?: string | null
+          service?: string
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "google_sync_logs_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "google_connections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "google_sync_logs_initiative_id_fkey"
+            columns: ["initiative_id"]
+            isOneToOne: false
+            referencedRelation: "initiatives"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       infrastructures: {
         Row: {
           assets: string | null
@@ -911,6 +1004,44 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "initiative_conversations_initiative_id_fkey"
+            columns: ["initiative_id"]
+            isOneToOne: false
+            referencedRelation: "initiatives"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      initiative_drive_links: {
+        Row: {
+          created_at: string | null
+          drive_folder_id: string | null
+          drive_folder_name: string | null
+          drive_folder_url: string | null
+          id: string
+          initiative_id: string
+          link_type: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          drive_folder_id?: string | null
+          drive_folder_name?: string | null
+          drive_folder_url?: string | null
+          id?: string
+          initiative_id: string
+          link_type?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          drive_folder_id?: string | null
+          drive_folder_name?: string | null
+          drive_folder_url?: string | null
+          id?: string
+          initiative_id?: string
+          link_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "initiative_drive_links_initiative_id_fkey"
             columns: ["initiative_id"]
             isOneToOne: false
             referencedRelation: "initiatives"
