@@ -21,11 +21,23 @@ async function logAction(supabase: any, entityName: string, entityId: string | n
   }
 }
 
+async function callGoogleApi(supabaseUrl: string, supabaseKey: string, userId: string, service: string, action: string, params: any) {
+  const res = await fetch(`${supabaseUrl}/functions/v1/google-api`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${supabaseKey}`,
+    },
+    body: JSON.stringify({ service, action, params, user_id: userId }),
+  });
+  return res.json();
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { messages, mode } = await req.json();
+    const { messages, mode, user_id } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
@@ -45,6 +57,19 @@ serve(async (req) => {
       supabase.from("initiative_history").select("id, initiative_id, entry_type, title, content, source, author, created_at").order("created_at", { ascending: false }).limit(15),
     ]);
 
+    // Check Google connection status
+    let googleConnected = false;
+    if (user_id) {
+      const { data: gConn } = await supabase
+        .from("google_connections")
+        .select("id, email, status")
+        .eq("user_id", user_id)
+        .eq("status", "active")
+        .limit(1)
+        .maybeSingle();
+      googleConnected = !!gConn;
+    }
+
     const contextStr = JSON.stringify({
       initiatives: initiatives.data || [],
       tasks: tasks.data || [],
@@ -54,13 +79,27 @@ serve(async (req) => {
       projects: projects.data || [],
       upcoming_events: events.data || [],
       recent_history: recentHistory.data || [],
+      google_connected: googleConnected,
     });
 
     const systemPrompt = `Você é o Assistente Executivo IA do Sistema CEO da ExudusTech.
 Responda SEMPRE em português brasileiro, de forma objetiva, estratégica e executiva.
+Use SEMPRE o horário de Brasília (America/Sao_Paulo). Datas em dd/mm/aaaa, hora em 24h.
 
 CAPACIDADES IMPORTANTES:
 Você pode criar e vincular entidades no sistema. Quando o CEO pedir para cadastrar algo, use as ferramentas disponíveis.
+
+${googleConnected ? `INTEGRAÇÃO GOOGLE ATIVA:
+Você tem acesso à conta Google do CEO (ph@exudustech.com.br). Pode:
+- Consultar e gerenciar a agenda (Google Calendar)
+- Ler, buscar e enviar emails (Gmail)
+- Buscar e listar arquivos no Drive
+REGRAS GOOGLE:
+- SEMPRE peça confirmação antes de enviar email ou criar/alterar evento
+- Ao listar agenda, formate com emojis e horários claros
+- Ao listar emails, mostre remetente, assunto e data
+- Ao encontrar algo relevante para uma iniciativa, sugira vincular
+- Registre ações Google no histórico da iniciativa quando aplicável` : `GOOGLE NÃO CONECTADO: Se o CEO pedir algo do Google (agenda, email, drive), informe que precisa conectar a conta em Configurações > Integrações Google.`}
 
 REGRAS DE CADASTRO ASSISTIDO:
 1. Ao receber um pedido de cadastro, identifique TODAS as entidades mencionadas
@@ -77,14 +116,12 @@ IMPORTANTE - FLUXO DE CONFIRMAÇÃO:
 - Se o usuário não confirmar, pergunte o que deseja ajustar
 
 MEMÓRIA VIVA DAS INICIATIVAS:
-- O sistema possui um histórico expandido por iniciativa com: atualizações, conversas, interpretações da IA, ações geradas, decisões, lições aprendidas e lacunas detectadas.
-- Ao processar uma conversa sobre uma iniciativa, você deve:
-  1. Registrar a conversa em initiative_conversations (com raw_user_message e raw_ai_response)
-  2. Gerar uma interpretação em initiative_interpretations (entidades, intenção, temas, ações sugeridas, confiança)
-  3. Se criar tarefas, decisões ou atualizar status, registrar em initiative_actions
-  4. Se detectar algo mencionado que NÃO virou ação, registrar em initiative_gaps
+- O sistema possui um histórico expandido por iniciativa.
+- Ao processar uma conversa sobre uma iniciativa, registre no histórico.
 - Use o recent_history do contexto para responder com base no que já foi registrado.
-- Sempre que responder sobre uma iniciativa, considere o histórico completo dela.
+
+INTEGRAÇÃO CRM:
+O sistema tem um CRM para comunicação por WhatsApp e Email. Para enviar WhatsApp, registre na tabela communication_requests com channel='whatsapp'.
 
 CONTEXTO ATUAL DO SISTEMA:
 ${contextStr}
@@ -92,42 +129,12 @@ ${contextStr}
 REGRAS DE FORMATAÇÃO DE RESPOSTA (OBRIGATÓRIAS):
 Você DEVE formatar suas respostas de forma visual, clara e profissional usando Markdown avançado.
 
-1. **Estrutura visual**: Use títulos (## e ###), separadores (---), listas e tabelas para organizar a informação.
-2. **Emojis estratégicos**: Use emojis relevantes para facilitar a leitura rápida:
-   - 🟢 Ativo/OK  🟡 Atenção/Em andamento  🔴 Crítico/Bloqueado  ⚪ Pausado/Esfriado
-   - 🎯 Próxima ação  ⚠️ Risco  📊 Dados/Métricas  💰 Financeiro  📅 Agenda
-   - 🚀 Prioridade crítica  ⭐ Alta  📌 Média  📎 Baixa
-   - ✅ Concluído  ❌ Cancelado  🔄 Em progresso  ⏳ Aguardando
-3. **Tabelas Markdown**: Para comparações, listas de entidades ou dashboards, use tabelas:
-   | Iniciativa | Status | Prioridade | Próxima Ação |
-   |---|---|---|---|
-4. **Seções claras**: Agrupe por categoria usando cabeçalhos. Ex: "## 🚀 Iniciativas Críticas", "## 📊 Visão Geral"
-5. **Destaques**: Use **negrito** para dados-chave, \`código\` para IDs ou termos técnicos, e > blockquotes para insights ou recomendações executivas.
-6. **Indicadores visuais de status**: Sempre acompanhe status com o emoji de cor correspondente.
-7. **Barras de progresso textuais**: Para métricas, use representações como: "████████░░ 80%"
-8. **Cards de resumo**: Use blockquotes para destacar resumos executivos:
-   > 📋 **Resumo**: X iniciativas ativas, Y tarefas pendentes, Z stakeholders envolvidos
-
-EXEMPLOS DE FORMATAÇÃO:
-
-Para um panorama estratégico:
-## 📊 Radar Estratégico ExudusTech
-
-### 🚀 Foco Crítico
-| Iniciativa | Status | Risco | Próxima Ação |
-|---|---|---|---|
-| 🟢 SGORJ / Ariel | Ativo | ⚠️ Timing | 🎯 Integrações |
-
-### 💡 Recomendação Executiva
-> Priorizar SGORJ e NitsClean esta semana. Controller FG precisa de follow-up urgente.
-
-Para cadastros:
-### 📝 Preview do Cadastro
-- **Nome**: [nome]
-- **Status**: 🟢 Ativo
-- **Prioridade**: 🚀 Crítica
-
-Seja SEMPRE visual, organizado e acionável. Nunca responda em texto corrido sem formatação.`;
+1. **Estrutura visual**: Use títulos (## e ###), separadores (---), listas e tabelas.
+2. **Emojis estratégicos**: 🟢 Ativo/OK  🟡 Atenção  🔴 Crítico  ⚪ Pausado  🎯 Próxima ação  ⚠️ Risco  📊 Dados  💰 Financeiro  📅 Agenda  🚀 Prioridade crítica  ✅ Concluído  ❌ Cancelado  🔄 Em progresso  ⏳ Aguardando  📧 Email  📁 Drive  📆 Calendar
+3. **Tabelas Markdown**: Para comparações, listas ou dashboards.
+4. **Seções claras**: Agrupe por categoria usando cabeçalhos.
+5. **Destaques**: Use **negrito** para dados-chave, > blockquotes para insights executivos.
+6. Seja SEMPRE visual, organizado e acionável. Nunca responda em texto corrido sem formatação.`;
 
     const tools = [
       {
@@ -245,6 +252,183 @@ Seja SEMPRE visual, organizado e acionável. Nunca responda em texto corrido sem
           },
         },
       },
+      // Google Calendar tools
+      {
+        type: "function",
+        function: {
+          name: "google_calendar_list",
+          description: "Lista eventos do Google Calendar. Use para mostrar agenda do dia, semana ou mês.",
+          parameters: {
+            type: "object",
+            properties: {
+              timeMin: { type: "string", description: "ISO datetime - início do período" },
+              timeMax: { type: "string", description: "ISO datetime - fim do período" },
+              maxResults: { type: "number", description: "Quantidade máxima de eventos" },
+            },
+            required: ["timeMin"],
+          },
+        },
+      },
+      {
+        type: "function",
+        function: {
+          name: "google_calendar_create",
+          description: "Cria um evento no Google Calendar. SEMPRE peça confirmação antes.",
+          parameters: {
+            type: "object",
+            properties: {
+              summary: { type: "string", description: "Título do evento" },
+              description: { type: "string" },
+              start: { type: "string", description: "ISO datetime de início" },
+              end: { type: "string", description: "ISO datetime de fim" },
+              location: { type: "string" },
+              attendees: { type: "array", items: { type: "string" }, description: "Lista de emails dos participantes" },
+            },
+            required: ["summary", "start", "end"],
+          },
+        },
+      },
+      // Gmail tools
+      {
+        type: "function",
+        function: {
+          name: "gmail_list",
+          description: "Lista emails do Gmail. Busca por query (remetente, assunto, etc).",
+          parameters: {
+            type: "object",
+            properties: {
+              query: { type: "string", description: "Query de busca Gmail (ex: 'from:nome@email.com', 'subject:assunto', 'is:unread')" },
+              maxResults: { type: "number" },
+            },
+            required: [],
+          },
+        },
+      },
+      {
+        type: "function",
+        function: {
+          name: "gmail_read",
+          description: "Lê o conteúdo completo de um email específico.",
+          parameters: {
+            type: "object",
+            properties: {
+              messageId: { type: "string", description: "ID da mensagem" },
+            },
+            required: ["messageId"],
+          },
+        },
+      },
+      {
+        type: "function",
+        function: {
+          name: "gmail_send",
+          description: "Envia um email pelo Gmail. SEMPRE peça confirmação antes de enviar.",
+          parameters: {
+            type: "object",
+            properties: {
+              to: { type: "string", description: "Email do destinatário" },
+              subject: { type: "string" },
+              body: { type: "string" },
+              cc: { type: "string" },
+              bcc: { type: "string" },
+            },
+            required: ["to", "subject", "body"],
+          },
+        },
+      },
+      {
+        type: "function",
+        function: {
+          name: "gmail_draft",
+          description: "Cria um rascunho de email no Gmail.",
+          parameters: {
+            type: "object",
+            properties: {
+              to: { type: "string" },
+              subject: { type: "string" },
+              body: { type: "string" },
+            },
+            required: ["to", "subject", "body"],
+          },
+        },
+      },
+      // Google Drive tools
+      {
+        type: "function",
+        function: {
+          name: "drive_list_files",
+          description: "Lista arquivos do Google Drive, opcionalmente dentro de uma pasta.",
+          parameters: {
+            type: "object",
+            properties: {
+              folderId: { type: "string", description: "ID da pasta (opcional)" },
+              query: { type: "string", description: "Query adicional" },
+              maxResults: { type: "number" },
+            },
+            required: [],
+          },
+        },
+      },
+      {
+        type: "function",
+        function: {
+          name: "drive_search",
+          description: "Busca arquivos no Google Drive por nome.",
+          parameters: {
+            type: "object",
+            properties: {
+              name: { type: "string", description: "Nome parcial do arquivo" },
+              mimeType: { type: "string", description: "Tipo MIME (ex: application/vnd.google-apps.folder)" },
+            },
+            required: [],
+          },
+        },
+      },
+      {
+        type: "function",
+        function: {
+          name: "drive_read_file",
+          description: "Lê conteúdo de um arquivo do Google Drive (Google Docs/Sheets/Slides).",
+          parameters: {
+            type: "object",
+            properties: {
+              fileId: { type: "string", description: "ID do arquivo" },
+            },
+            required: ["fileId"],
+          },
+        },
+      },
+      {
+        type: "function",
+        function: {
+          name: "drive_list_folders",
+          description: "Lista todas as pastas do Google Drive.",
+          parameters: {
+            type: "object",
+            properties: {},
+            required: [],
+          },
+        },
+      },
+      // Communication (CRM bridge)
+      {
+        type: "function",
+        function: {
+          name: "send_whatsapp",
+          description: "Envia mensagem WhatsApp via módulo CRM. SEMPRE peça confirmação antes.",
+          parameters: {
+            type: "object",
+            properties: {
+              target_name: { type: "string" },
+              target_phone: { type: "string" },
+              message_body: { type: "string" },
+              related_entity_type: { type: "string" },
+              related_entity_id: { type: "string" },
+            },
+            required: ["target_phone", "message_body"],
+          },
+        },
+      },
     ];
 
     // First AI call
@@ -283,7 +467,7 @@ Seja SEMPRE visual, organizado e acionável. Nunca responda em texto corrido sem
               const { data, error } = await supabase.from("initiatives").insert(args).select("id, name").single();
               result = error ? { success: false, error: error.message } : { success: true, id: data.id, name: data.name };
               if (data) {
-                createdEntities.push(`Iniciativa "${data.name}" (${data.id})`);
+                createdEntities.push(`Iniciativa "${data.name}"`);
                 await logAction(supabase, "initiatives", data.id, "create", "ia_assistant", `IA criou iniciativa "${data.name}"`, args);
               }
               break;
@@ -292,7 +476,7 @@ Seja SEMPRE visual, organizado e acionável. Nunca responda em texto corrido sem
               const { data, error } = await supabase.from("organizations").insert(args).select("id, name").single();
               result = error ? { success: false, error: error.message } : { success: true, id: data.id, name: data.name };
               if (data) {
-                createdEntities.push(`Organização "${data.name}" (${data.id})`);
+                createdEntities.push(`Organização "${data.name}"`);
                 await logAction(supabase, "organizations", data.id, "create", "ia_assistant", `IA criou organização "${data.name}"`, args);
               }
               break;
@@ -301,7 +485,7 @@ Seja SEMPRE visual, organizado e acionável. Nunca responda em texto corrido sem
               const { data, error } = await supabase.from("stakeholders").insert(args).select("id, name").single();
               result = error ? { success: false, error: error.message } : { success: true, id: data.id, name: data.name };
               if (data) {
-                createdEntities.push(`Stakeholder "${data.name}" (${data.id})`);
+                createdEntities.push(`Stakeholder "${data.name}"`);
                 await logAction(supabase, "stakeholders", data.id, "create", "ia_assistant", `IA criou stakeholder "${data.name}"`, args);
               }
               break;
@@ -310,7 +494,7 @@ Seja SEMPRE visual, organizado e acionável. Nunca responda em texto corrido sem
               const { data, error } = await supabase.from("ceo_tasks").insert(args).select("id, title").single();
               result = error ? { success: false, error: error.message } : { success: true, id: data.id, title: data.title };
               if (data) {
-                createdEntities.push(`Tarefa "${data.title}" (${data.id})`);
+                createdEntities.push(`Tarefa "${data.title}"`);
                 await logAction(supabase, "ceo_tasks", data.id, "create", "ia_assistant", `IA criou tarefa "${data.title}"`, args);
               }
               break;
@@ -319,7 +503,7 @@ Seja SEMPRE visual, organizado e acionável. Nunca responda em texto corrido sem
               const { data, error } = await supabase.from("projects").insert(args).select("id, name").single();
               result = error ? { success: false, error: error.message } : { success: true, id: data.id, name: data.name };
               if (data) {
-                createdEntities.push(`Projeto "${data.name}" (${data.id})`);
+                createdEntities.push(`Projeto "${data.name}"`);
                 await logAction(supabase, "projects", data.id, "create", "ia_assistant", `IA criou projeto "${data.name}"`, args);
               }
               break;
@@ -327,10 +511,79 @@ Seja SEMPRE visual, organizado e acionável. Nunca responda em texto corrido sem
             case "link_stakeholder_to_initiative": {
               const { error } = await supabase.from("initiative_stakeholders").insert(args);
               result = error ? { success: false, error: error.message } : { success: true };
-              if (!error) {
-                createdEntities.push(`Vínculo stakeholder-iniciativa criado`);
-                await logAction(supabase, "initiative_stakeholders", null, "create", "ia_assistant", `IA vinculou stakeholder à iniciativa`, args);
-              }
+              if (!error) createdEntities.push(`Vínculo stakeholder-iniciativa`);
+              break;
+            }
+            // Google Calendar
+            case "google_calendar_list": {
+              if (!user_id) { result = { success: false, error: "user_id required" }; break; }
+              result = await callGoogleApi(supabaseUrl, supabaseKey, user_id, "calendar", "list_events", args);
+              break;
+            }
+            case "google_calendar_create": {
+              if (!user_id) { result = { success: false, error: "user_id required" }; break; }
+              result = await callGoogleApi(supabaseUrl, supabaseKey, user_id, "calendar", "create_event", args);
+              if (result.event) createdEntities.push(`Evento "${args.summary}" criado na agenda`);
+              break;
+            }
+            // Gmail
+            case "gmail_list": {
+              if (!user_id) { result = { success: false, error: "user_id required" }; break; }
+              result = await callGoogleApi(supabaseUrl, supabaseKey, user_id, "gmail", "list_messages", args);
+              break;
+            }
+            case "gmail_read": {
+              if (!user_id) { result = { success: false, error: "user_id required" }; break; }
+              result = await callGoogleApi(supabaseUrl, supabaseKey, user_id, "gmail", "get_message", args);
+              break;
+            }
+            case "gmail_send": {
+              if (!user_id) { result = { success: false, error: "user_id required" }; break; }
+              result = await callGoogleApi(supabaseUrl, supabaseKey, user_id, "gmail", "send_email", args);
+              if (result.success) createdEntities.push(`Email enviado para ${args.to}`);
+              break;
+            }
+            case "gmail_draft": {
+              if (!user_id) { result = { success: false, error: "user_id required" }; break; }
+              result = await callGoogleApi(supabaseUrl, supabaseKey, user_id, "gmail", "create_draft", args);
+              if (result.success) createdEntities.push(`Rascunho criado: ${args.subject}`);
+              break;
+            }
+            // Drive
+            case "drive_list_files": {
+              if (!user_id) { result = { success: false, error: "user_id required" }; break; }
+              result = await callGoogleApi(supabaseUrl, supabaseKey, user_id, "drive", "list_files", args);
+              break;
+            }
+            case "drive_search": {
+              if (!user_id) { result = { success: false, error: "user_id required" }; break; }
+              result = await callGoogleApi(supabaseUrl, supabaseKey, user_id, "drive", "search_files", args);
+              break;
+            }
+            case "drive_read_file": {
+              if (!user_id) { result = { success: false, error: "user_id required" }; break; }
+              result = await callGoogleApi(supabaseUrl, supabaseKey, user_id, "drive", "get_file_content", args);
+              break;
+            }
+            case "drive_list_folders": {
+              if (!user_id) { result = { success: false, error: "user_id required" }; break; }
+              result = await callGoogleApi(supabaseUrl, supabaseKey, user_id, "drive", "list_folders", args);
+              break;
+            }
+            // WhatsApp via CRM
+            case "send_whatsapp": {
+              const { error } = await supabase.from("communication_requests").insert({
+                channel: "whatsapp",
+                source_module: "ceo",
+                target_name: args.target_name,
+                target_phone: args.target_phone,
+                message_body: args.message_body,
+                related_entity_type: args.related_entity_type,
+                related_entity_id: args.related_entity_id,
+                requested_by: "ia_assistant",
+              });
+              result = error ? { success: false, error: error.message } : { success: true };
+              if (!error) createdEntities.push(`WhatsApp para ${args.target_name || args.target_phone}`);
               break;
             }
           }

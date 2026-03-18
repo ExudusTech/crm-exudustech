@@ -5,8 +5,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Bot, Send, User, Loader2, Volume2, VolumeX, Plus, Calendar, DollarSign, ListTodo, Radar } from "lucide-react";
+import { Bot, Send, User, Loader2, Volume2, VolumeX, Plus, Calendar, DollarSign, ListTodo, Radar, Mail, HardDrive, MessageSquare } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -20,15 +21,19 @@ interface Message {
 const quickCommands = [
   { icon: Radar, label: "Radar completo", prompt: "Me dê um panorama completo do radar estratégico da ExudusTech agora." },
   { icon: ListTodo, label: "Tarefas atrasadas", prompt: "Quais tarefas estão atrasadas ou bloqueadas?" },
-  { icon: Calendar, label: "Agenda de hoje", prompt: "Como está minha agenda de hoje?" },
+  { icon: Calendar, label: "Agenda da semana", prompt: "Me mostre minha agenda da semana do Google Calendar." },
+  { icon: Mail, label: "Emails importantes", prompt: "Quais emails importantes recebi hoje no Gmail?" },
+  { icon: HardDrive, label: "Arquivos recentes", prompt: "Liste os arquivos mais recentes do meu Google Drive." },
   { icon: DollarSign, label: "Como está o caixa", prompt: "Como está o caixa da empresa?" },
   { icon: Plus, label: "Cadastrar iniciativa", prompt: "Quero cadastrar uma nova iniciativa." },
+  { icon: MessageSquare, label: "Enviar WhatsApp", prompt: "Quero enviar uma mensagem por WhatsApp." },
 ];
 
 const CeoIA = () => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([
-    { role: "assistant", content: "Olá! Sou o assistente IA do Sistema CEO. Posso ajudar com:\n\n- 📊 **Análises estratégicas** e resumos\n- 📝 **Cadastrar entidades** (iniciativas, organizações, stakeholders, tarefas)\n- 🔗 **Vincular entidades** entre si\n- 📅 **Consultar agenda** e pendências\n- 💰 **Analisar finanças**\n\nDigite sua solicitação ou use os atalhos abaixo." },
+    { role: "assistant", content: "Olá! Sou o assistente IA do Sistema CEO. Posso ajudar com:\n\n- 📊 **Análises estratégicas** e resumos\n- 📝 **Cadastrar entidades** (iniciativas, organizações, stakeholders, tarefas)\n- 📅 **Consultar e gerenciar sua agenda** (Google Calendar)\n- 📧 **Ler e enviar emails** (Gmail)\n- 📁 **Acessar arquivos** (Google Drive)\n- 💬 **Enviar WhatsApp** via CRM\n- 🔗 **Vincular entidades** entre si\n- 💰 **Analisar finanças**\n\nDigite sua solicitação ou use os atalhos abaixo." },
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -65,6 +70,7 @@ const CeoIA = () => {
           messages: updatedMessages
             .filter(m => m.role === "user" || m.role === "assistant")
             .map(m => ({ role: m.role, content: m.content })),
+          user_id: user?.id,
         },
       });
 
