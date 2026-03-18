@@ -259,6 +259,70 @@ const CeoInitiativeDetail = () => {
               )}
             </CardContent>
           </Card>
+
+          {/* Vínculos Relacionais */}
+          <Card className="mt-4">
+            <CardHeader className="py-3 px-4">
+              <CardTitle className="text-base">Vínculos</CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 pt-0">
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {/* Organizações */}
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Organização Principal</p>
+                  {relatedOrgs.main ? (
+                    <Badge variant="outline" className="cursor-pointer" onClick={() => navigate("/ceo/organizacoes")}>{relatedOrgs.main.name}</Badge>
+                  ) : <span className="text-sm text-muted-foreground">—</span>}
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Parceiro</p>
+                  {relatedOrgs.partner ? (
+                    <Badge variant="outline" className="cursor-pointer" onClick={() => navigate("/ceo/organizacoes")}>{relatedOrgs.partner.name}</Badge>
+                  ) : <span className="text-sm text-muted-foreground">—</span>}
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Cliente Piloto</p>
+                  {relatedOrgs.pilot ? (
+                    <Badge variant="outline" className="cursor-pointer" onClick={() => navigate("/ceo/organizacoes")}>{relatedOrgs.pilot.name}</Badge>
+                  ) : <span className="text-sm text-muted-foreground">—</span>}
+                </div>
+
+                {/* Ativo Estratégico */}
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Ativo Estratégico</p>
+                  {relatedAsset ? (
+                    <Badge variant="outline">{relatedAsset.name}</Badge>
+                  ) : <span className="text-sm text-muted-foreground">—</span>}
+                </div>
+
+                {/* Produtos */}
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Produtos ({relatedProducts.length})</p>
+                  {relatedProducts.length > 0 ? (
+                    <div className="flex flex-wrap gap-1">
+                      {relatedProducts.map((p: any) => (
+                        <Badge key={p.id} variant="outline" className="cursor-pointer" onClick={() => navigate("/ceo/produtos")}>{p.name}</Badge>
+                      ))}
+                    </div>
+                  ) : <span className="text-sm text-muted-foreground">—</span>}
+                </div>
+
+                {/* Projetos */}
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Projetos ({relatedProjects.length})</p>
+                  {relatedProjects.length > 0 ? (
+                    <div className="flex flex-wrap gap-1">
+                      {relatedProjects.map((p: any) => (
+                        <Badge key={p.id} variant="outline" className="cursor-pointer" onClick={() => navigate("/ceo/projetos")}>
+                          {p.name}
+                        </Badge>
+                      ))}
+                    </div>
+                  ) : <span className="text-sm text-muted-foreground">—</span>}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* TAREFAS */}
