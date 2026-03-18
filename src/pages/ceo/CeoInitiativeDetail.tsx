@@ -134,18 +134,8 @@ const CeoInitiativeDetail = () => {
     fetchAll();
   };
 
-  const addHistoryEntry = async () => {
-    if (!historyForm.content.trim()) return;
-    const { error } = await (supabase as any).from("initiative_history").insert({
-      initiative_id: id,
-      ...historyForm,
-    });
-    if (error) { toast({ title: "Erro", description: error.message, variant: "destructive" }); return; }
-    toast({ title: "Registrado" });
-    setHistoryDialog(false);
-    setHistoryForm({ title: "", content: "", entry_type: "atualizacao" });
-    fetchAll();
-  };
+
+
 
   const exportContext = (format: "json" | "markdown" | "txt") => {
     const ctx = {
