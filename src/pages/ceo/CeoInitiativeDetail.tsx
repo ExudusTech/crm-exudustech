@@ -57,7 +57,7 @@ const CeoInitiativeDetail = () => {
   const fetchAll = useCallback(async () => {
     if (!id) return;
     setLoading(true);
-    const [ini, t, sh, doc, inf, rev, exp, hist, dec, les, mod, projects] = await Promise.all([
+    const [ini, t, sh, doc, inf, rev, exp, hist, dec, les, mod, projects, convs, interps, acts, gps] = await Promise.all([
       (supabase as any).from("initiatives").select("*").eq("id", id).single(),
       (supabase as any).from("ceo_tasks").select("*").eq("initiative_id", id).order("created_at", { ascending: false }),
       (supabase as any).from("initiative_stakeholders").select("*, stakeholders(*)").eq("initiative_id", id),
@@ -70,6 +70,10 @@ const CeoInitiativeDetail = () => {
       (supabase as any).from("lessons_learned").select("*").eq("initiative_id", id).order("created_at", { ascending: false }),
       (supabase as any).from("module_usages").select("*, modules(*)").eq("used_in_initiative_id", id),
       (supabase as any).from("projects").select("*, products(id, name, status)").eq("initiative_id", id),
+      (supabase as any).from("initiative_conversations").select("*").eq("initiative_id", id).order("created_at", { ascending: false }),
+      (supabase as any).from("initiative_interpretations").select("*").eq("initiative_id", id).order("created_at", { ascending: false }),
+      (supabase as any).from("initiative_actions").select("*").eq("initiative_id", id).order("created_at", { ascending: false }),
+      (supabase as any).from("initiative_gaps").select("*").eq("initiative_id", id).order("created_at", { ascending: false }),
     ]);
     if (ini.data) {
       setInitiative(ini.data);
