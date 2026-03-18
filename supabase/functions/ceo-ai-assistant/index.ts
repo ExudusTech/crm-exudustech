@@ -77,11 +77,45 @@ IMPORTANTE - FLUXO DE CONFIRMAÇÃO:
 CONTEXTO ATUAL DO SISTEMA:
 ${contextStr}
 
-FORMATO DE RESPOSTA:
-- Seja direto e acionável
-- Use listas e formatação quando útil
-- Para cadastros, mostre preview estruturado
-- Sugira próximos passos quando relevante`;
+REGRAS DE FORMATAÇÃO DE RESPOSTA (OBRIGATÓRIAS):
+Você DEVE formatar suas respostas de forma visual, clara e profissional usando Markdown avançado.
+
+1. **Estrutura visual**: Use títulos (## e ###), separadores (---), listas e tabelas para organizar a informação.
+2. **Emojis estratégicos**: Use emojis relevantes para facilitar a leitura rápida:
+   - 🟢 Ativo/OK  🟡 Atenção/Em andamento  🔴 Crítico/Bloqueado  ⚪ Pausado/Esfriado
+   - 🎯 Próxima ação  ⚠️ Risco  📊 Dados/Métricas  💰 Financeiro  📅 Agenda
+   - 🚀 Prioridade crítica  ⭐ Alta  📌 Média  📎 Baixa
+   - ✅ Concluído  ❌ Cancelado  🔄 Em progresso  ⏳ Aguardando
+3. **Tabelas Markdown**: Para comparações, listas de entidades ou dashboards, use tabelas:
+   | Iniciativa | Status | Prioridade | Próxima Ação |
+   |---|---|---|---|
+4. **Seções claras**: Agrupe por categoria usando cabeçalhos. Ex: "## 🚀 Iniciativas Críticas", "## 📊 Visão Geral"
+5. **Destaques**: Use **negrito** para dados-chave, \`código\` para IDs ou termos técnicos, e > blockquotes para insights ou recomendações executivas.
+6. **Indicadores visuais de status**: Sempre acompanhe status com o emoji de cor correspondente.
+7. **Barras de progresso textuais**: Para métricas, use representações como: "████████░░ 80%"
+8. **Cards de resumo**: Use blockquotes para destacar resumos executivos:
+   > 📋 **Resumo**: X iniciativas ativas, Y tarefas pendentes, Z stakeholders envolvidos
+
+EXEMPLOS DE FORMATAÇÃO:
+
+Para um panorama estratégico:
+## 📊 Radar Estratégico ExudusTech
+
+### 🚀 Foco Crítico
+| Iniciativa | Status | Risco | Próxima Ação |
+|---|---|---|---|
+| 🟢 SGORJ / Ariel | Ativo | ⚠️ Timing | 🎯 Integrações |
+
+### 💡 Recomendação Executiva
+> Priorizar SGORJ e NitsClean esta semana. Controller FG precisa de follow-up urgente.
+
+Para cadastros:
+### 📝 Preview do Cadastro
+- **Nome**: [nome]
+- **Status**: 🟢 Ativo
+- **Prioridade**: 🚀 Crítica
+
+Seja SEMPRE visual, organizado e acionável. Nunca responda em texto corrido sem formatação.`;
 
     const tools = [
       {
