@@ -30,7 +30,7 @@ const CeoDashboard = () => {
   useEffect(() => {
     const load = async () => {
       setLoading(true);
-      const [initiatives, tasks, orgs, stakeholders, banks, revenues, expenses, subs, assets] = await Promise.all([
+      const [initiatives, tasks, orgs, stakeholders, banks, revenues, expenses, subs, assets, events, lessons] = await Promise.all([
         (supabase as any).from("initiatives").select("id", { count: "exact", head: true }).eq("status", "ativo"),
         (supabase as any).from("ceo_tasks").select("*").in("status", ["todo", "doing", "bloqueado"]),
         (supabase as any).from("organizations").select("id", { count: "exact", head: true }),
@@ -40,6 +40,8 @@ const CeoDashboard = () => {
         (supabase as any).from("expenses").select("amount,status"),
         (supabase as any).from("subscriptions").select("monthly_amount,status"),
         (supabase as any).from("strategic_assets").select("id,name,asset_type,status,priority").order("created_at", { ascending: false }).limit(5),
+        (supabase as any).from("ceo_events").select("*").gte("event_date", new Date().toISOString().slice(0, 10)).lte("event_date", new Date().toISOString().slice(0, 10) + "T23:59:59").order("event_date", { ascending: true }).limit(5),
+        (supabase as any).from("lessons_learned").select("id,title,category,created_at").order("created_at", { ascending: false }).limit(5),
       ]);
 
       const today = new Date().toISOString().slice(0, 10);
