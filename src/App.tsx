@@ -35,6 +35,8 @@ import CeoInfraestrutura from "./pages/ceo/CeoInfraestrutura";
 import CeoDocumentos from "./pages/ceo/CeoDocumentos";
 import CeoModulos from "./pages/ceo/CeoModulos";
 import CeoIA from "./pages/ceo/CeoIA";
+import CeoInitiativeDetail from "./pages/ceo/CeoInitiativeDetail";
+import CeoDecisionsLessons from "./pages/ceo/CeoDecisionsLessons";
 
 const queryClient = new QueryClient();
 
