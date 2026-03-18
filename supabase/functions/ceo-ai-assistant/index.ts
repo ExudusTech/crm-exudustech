@@ -1,0 +1,302 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  try {
+    const { messages, mode } = await req.json();
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Fetch context
+    const [initiatives, tasks, orgs, stakeholders, products, projects, events] = await Promise.all([
+      supabase.from("initiatives").select("id, name, status, priority, next_action, main_risk, deadline").eq("status", "ativo").limit(15),
+      supabase.from("ceo_tasks").select("id, title, status, priority, deadline, responsible").in("status", ["todo", "doing", "bloqueado"]).limit(20),
+      supabase.from("organizations").select("id, name, type, status").eq("status", "ativo").limit(15),
+      supabase.from("stakeholders").select("id, name, role_title, stakeholder_type, organization_id").limit(20),
+      supabase.from("products").select("id, name, status, category").limit(10),
+      supabase.from("projects").select("id, name, status, initiative_id, responsible").limit(10),
+      supabase.from("ceo_events").select("id, title, event_date, description").gte("event_date", new Date().toISOString()).order("event_date").limit(5),
+    ]);
+
+    const contextStr = JSON.stringify({
+      initiatives: initiatives.data || [],
+      tasks: tasks.data || [],
+      organizations: orgs.data || [],
+      stakeholders: stakeholders.data || [],
+      products: products.data || [],
+      projects: projects.data || [],
+      upcoming_events: events.data || [],
+    });
+
+    const systemPrompt = `Você é o Assistente Executivo IA do Sistema CEO da ExudusTech.
+Responda SEMPRE em português brasileiro, de forma objetiva, estratégica e executiva.
+
+CAPACIDADES IMPORTANTES:
+Você pode criar e vincular entidades no sistema. Quando o CEO pedir para cadastrar algo, use as ferramentas disponíveis.
+
+REGRAS DE CADASTRO ASSISTIDO:
+1. Ao receber um pedido de cadastro, identifique TODAS as entidades mencionadas
+2. Verifique se já existem no contexto antes de criar duplicatas
+3. Pergunte pelos campos faltantes de forma objetiva
+4. Mostre um RESUMO DO QUE SERÁ CRIADO e peça confirmação
+5. Após confirmação, execute as criações e vincule as entidades
+6. Confirme o que foi feito
+
+CONTEXTO ATUAL DO SISTEMA:
+${contextStr}
+
+FORMATO DE RESPOSTA:
+- Seja direto e acionável
+- Use listas e formatação quando útil
+- Para cadastros, mostre preview estruturado
+- Sugira próximos passos quando relevante`;
+
+    const tools = [
+      {
+        type: "function",
+        function: {
+          name: "create_initiative",
+          description: "Cria uma nova iniciativa no sistema",
+          parameters: {
+            type: "object",
+            properties: {
+              name: { type: "string", description: "Nome da iniciativa" },
+              short_name: { type: "string", description: "Sigla" },
+              description: { type: "string" },
+              status: { type: "string", enum: ["ativo", "pausado", "concluido", "cancelado", "em_analise"] },
+              priority: { type: "string", enum: ["critica", "alta", "media", "baixa"] },
+              next_action: { type: "string" },
+              main_risk: { type: "string" },
+              potential: { type: "string" },
+              deadline: { type: "string", description: "YYYY-MM-DD" },
+              organization_id: { type: "string", description: "UUID of existing org" },
+              partner_organization_id: { type: "string" },
+              pilot_organization_id: { type: "string" },
+            },
+            required: ["name"],
+          },
+        },
+      },
+      {
+        type: "function",
+        function: {
+          name: "create_organization",
+          description: "Cria uma nova organização",
+          parameters: {
+            type: "object",
+            properties: {
+              name: { type: "string" },
+              short_name: { type: "string" },
+              type: { type: "string", enum: ["cliente", "parceiro", "piloto", "instituicao", "organizacao_mae", "unidade", "interno"] },
+              segment: { type: "string" },
+            },
+            required: ["name"],
+          },
+        },
+      },
+      {
+        type: "function",
+        function: {
+          name: "create_stakeholder",
+          description: "Cria um novo stakeholder",
+          parameters: {
+            type: "object",
+            properties: {
+              name: { type: "string" },
+              role_title: { type: "string" },
+              email: { type: "string" },
+              phone: { type: "string" },
+              stakeholder_type: { type: "string", enum: ["decisor", "operacional", "tecnico", "comercial", "aprovador", "consultor", "outro"] },
+              organization_id: { type: "string" },
+            },
+            required: ["name"],
+          },
+        },
+      },
+      {
+        type: "function",
+        function: {
+          name: "create_task",
+          description: "Cria uma nova tarefa",
+          parameters: {
+            type: "object",
+            properties: {
+              title: { type: "string" },
+              description: { type: "string" },
+              initiative_id: { type: "string" },
+              project_id: { type: "string" },
+              responsible: { type: "string" },
+              priority: { type: "string", enum: ["critica", "alta", "media", "baixa"] },
+              deadline: { type: "string" },
+            },
+            required: ["title"],
+          },
+        },
+      },
+      {
+        type: "function",
+        function: {
+          name: "create_project",
+          description: "Cria um novo projeto",
+          parameters: {
+            type: "object",
+            properties: {
+              name: { type: "string" },
+              initiative_id: { type: "string" },
+              product_id: { type: "string" },
+              responsible: { type: "string" },
+              scope_summary: { type: "string" },
+            },
+            required: ["name"],
+          },
+        },
+      },
+      {
+        type: "function",
+        function: {
+          name: "link_stakeholder_to_initiative",
+          description: "Vincula um stakeholder a uma iniciativa",
+          parameters: {
+            type: "object",
+            properties: {
+              initiative_id: { type: "string" },
+              stakeholder_id: { type: "string" },
+              role: { type: "string" },
+            },
+            required: ["initiative_id", "stakeholder_id"],
+          },
+        },
+      },
+    ];
+
+    // First AI call
+    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [{ role: "system", content: systemPrompt }, ...messages],
+        tools,
+      }),
+    });
+
+    if (!aiResponse.ok) {
+      const status = aiResponse.status;
+      if (status === 429) return new Response(JSON.stringify({ error: "Rate limit exceeded" }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      if (status === 402) return new Response(JSON.stringify({ error: "Credits exhausted" }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      throw new Error(`AI error: ${status}`);
+    }
+
+    const aiData = await aiResponse.json();
+    const choice = aiData.choices?.[0];
+
+    // Handle tool calls
+    if (choice?.message?.tool_calls?.length > 0) {
+      const toolResults: any[] = [];
+      const createdEntities: string[] = [];
+
+      for (const tc of choice.message.tool_calls) {
+        const args = JSON.parse(tc.function.arguments);
+        let result: any = { success: false };
+
+        try {
+          switch (tc.function.name) {
+            case "create_initiative": {
+              const { data, error } = await supabase.from("initiatives").insert(args).select("id, name").single();
+              result = error ? { success: false, error: error.message } : { success: true, id: data.id, name: data.name };
+              if (data) createdEntities.push(`Iniciativa "${data.name}" (${data.id})`);
+              break;
+            }
+            case "create_organization": {
+              const { data, error } = await supabase.from("organizations").insert(args).select("id, name").single();
+              result = error ? { success: false, error: error.message } : { success: true, id: data.id, name: data.name };
+              if (data) createdEntities.push(`Organização "${data.name}" (${data.id})`);
+              break;
+            }
+            case "create_stakeholder": {
+              const { data, error } = await supabase.from("stakeholders").insert(args).select("id, name").single();
+              result = error ? { success: false, error: error.message } : { success: true, id: data.id, name: data.name };
+              if (data) createdEntities.push(`Stakeholder "${data.name}" (${data.id})`);
+              break;
+            }
+            case "create_task": {
+              const { data, error } = await supabase.from("ceo_tasks").insert(args).select("id, title").single();
+              result = error ? { success: false, error: error.message } : { success: true, id: data.id, title: data.title };
+              if (data) createdEntities.push(`Tarefa "${data.title}" (${data.id})`);
+              break;
+            }
+            case "create_project": {
+              const { data, error } = await supabase.from("projects").insert(args).select("id, name").single();
+              result = error ? { success: false, error: error.message } : { success: true, id: data.id, name: data.name };
+              if (data) createdEntities.push(`Projeto "${data.name}" (${data.id})`);
+              break;
+            }
+            case "link_stakeholder_to_initiative": {
+              const { error } = await supabase.from("initiative_stakeholders").insert(args);
+              result = error ? { success: false, error: error.message } : { success: true };
+              if (!error) createdEntities.push(`Vínculo stakeholder-iniciativa criado`);
+              break;
+            }
+          }
+        } catch (e: any) {
+          result = { success: false, error: e.message };
+        }
+
+        toolResults.push({
+          role: "tool",
+          tool_call_id: tc.id,
+          content: JSON.stringify(result),
+        });
+      }
+
+      // Second call with tool results
+      const followUp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash",
+          messages: [
+            { role: "system", content: systemPrompt },
+            ...messages,
+            choice.message,
+            ...toolResults,
+          ],
+        }),
+      });
+
+      const followUpData = await followUp.json();
+      const reply = followUpData.choices?.[0]?.message?.content || "Operação executada.";
+
+      return new Response(JSON.stringify({
+        reply,
+        created_entities: createdEntities,
+        tool_calls_executed: choice.message.tool_calls.length,
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // No tool calls - regular response
+    return new Response(JSON.stringify({
+      reply: choice?.message?.content || "Desculpe, não consegui processar.",
+      created_entities: [],
+      tool_calls_executed: 0,
+    }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+  } catch (e: any) {
+    console.error("ceo-ai-assistant error:", e);
+    return new Response(JSON.stringify({ error: e.message }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+});

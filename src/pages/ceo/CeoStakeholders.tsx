@@ -1,7 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCeoTable } from "@/hooks/use-ceo-table";
-import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Plus, Edit2, Trash2, Search, Users, Mail, Phone } from "lucide-react";
 import { StakeholderType, Organization } from "@/types/ceo";
+import { RelatedEntities } from "@/components/ceo/RelatedEntities";
 
 const stakeholderTypeLabels: Record<StakeholderType, string> = {
   decisor: "Decisor", operacional: "Operacional", tecnico: "Técnico",
@@ -28,21 +28,13 @@ const stakeholderTypeColors: Record<StakeholderType, string> = {
 };
 
 interface Stakeholder {
-  id: string;
-  name: string;
-  role_title: string | null;
-  organization_id: string | null;
-  email: string | null;
-  phone: string | null;
-  stakeholder_type: StakeholderType;
-  notes: string | null;
-  created_at: string;
-  updated_at: string;
+  id: string; name: string; role_title: string | null; organization_id: string | null;
+  email: string | null; phone: string | null; stakeholder_type: StakeholderType;
+  notes: string | null; created_at: string; updated_at: string;
 }
 
 const emptyStakeholder: Partial<Stakeholder> = {
-  name: "", role_title: "", organization_id: null, email: "", phone: "",
-  stakeholder_type: "outro", notes: "",
+  name: "", role_title: "", organization_id: null, email: "", phone: "", stakeholder_type: "outro", notes: "",
 };
 
 const CeoStakeholders = () => {
@@ -53,6 +45,7 @@ const CeoStakeholders = () => {
   const [editing, setEditing] = useState<Partial<Stakeholder>>(emptyStakeholder);
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState("all");
+  const [detailId, setDetailId] = useState<string | null>(null);
 
   useEffect(() => {
     (supabase as any).from("organizations").select("id,name").order("name").then(({ data: d }: any) => setOrgs(d || []));
@@ -65,7 +58,6 @@ const CeoStakeholders = () => {
   });
 
   const orgName = (id: string | null) => orgs.find(o => o.id === id)?.name || "—";
-
   const openCreate = () => { setEditing({ ...emptyStakeholder }); setDialogOpen(true); };
   const openEdit = (s: Stakeholder) => { setEditing({ ...s }); setDialogOpen(true); };
 
@@ -77,9 +69,7 @@ const CeoStakeholders = () => {
     if (ok) setDialogOpen(false);
   };
 
-  const handleDelete = async () => {
-    if (deleteId) { await remove(deleteId); setDeleteId(null); }
-  };
+  const selectedStk = data.find(s => s.id === detailId);
 
   if (loading) return <div className="p-6 space-y-4">{[1,2,3].map(i => <Skeleton key={i} className="h-16 w-full" />)}</div>;
 
@@ -107,38 +97,58 @@ const CeoStakeholders = () => {
         </Select>
       </div>
 
-      <Card>
-        <ScrollArea className="max-h-[65vh]">
-          <Table>
-            <TableHeader><TableRow>
-              <TableHead>Nome</TableHead><TableHead>Cargo/Papel</TableHead><TableHead>Organização</TableHead>
-              <TableHead>Tipo</TableHead><TableHead>Contato</TableHead><TableHead className="w-20">Ações</TableHead>
-            </TableRow></TableHeader>
-            <TableBody>
-              {filtered.length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground">Nenhum stakeholder encontrado</TableCell></TableRow>}
-              {filtered.map(s => (
-                <TableRow key={s.id}>
-                  <TableCell className="font-medium">{s.name}</TableCell>
-                  <TableCell>{s.role_title || "—"}</TableCell>
-                  <TableCell>{orgName(s.organization_id)}</TableCell>
-                  <TableCell><Badge className={stakeholderTypeColors[s.stakeholder_type]}>{stakeholderTypeLabels[s.stakeholder_type]}</Badge></TableCell>
-                  <TableCell>
-                    <div className="flex gap-2 text-xs text-muted-foreground">
-                      {s.email && <span className="flex items-center gap-1"><Mail className="h-3 w-3" />{s.email}</span>}
-                      {s.phone && <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{s.phone}</span>}
-                      {!s.email && !s.phone && "—"}
-                    </div>
-                  </TableCell>
-                  <TableCell className="flex gap-1">
-                    <Button variant="ghost" size="icon" onClick={() => openEdit(s)}><Edit2 className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="icon" onClick={() => setDeleteId(s.id)}><Trash2 className="h-4 w-4" /></Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </ScrollArea>
-      </Card>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className={detailId ? "lg:col-span-2" : "lg:col-span-3"}>
+          <Card>
+            <ScrollArea className="max-h-[65vh]">
+              <Table>
+                <TableHeader><TableRow>
+                  <TableHead>Nome</TableHead><TableHead>Cargo</TableHead><TableHead>Organização</TableHead>
+                  <TableHead>Tipo</TableHead><TableHead className="w-20">Ações</TableHead>
+                </TableRow></TableHeader>
+                <TableBody>
+                  {filtered.length === 0 && <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground">Nenhum stakeholder encontrado</TableCell></TableRow>}
+                  {filtered.map(s => (
+                    <TableRow
+                      key={s.id}
+                      className={`cursor-pointer hover:bg-muted/50 ${detailId === s.id ? "bg-muted/50" : ""}`}
+                      onClick={() => setDetailId(detailId === s.id ? null : s.id)}
+                    >
+                      <TableCell className="font-medium">{s.name}</TableCell>
+                      <TableCell>{s.role_title || "—"}</TableCell>
+                      <TableCell>{orgName(s.organization_id)}</TableCell>
+                      <TableCell><Badge className={stakeholderTypeColors[s.stakeholder_type]}>{stakeholderTypeLabels[s.stakeholder_type]}</Badge></TableCell>
+                      <TableCell>
+                        <div className="flex gap-1" onClick={e => e.stopPropagation()}>
+                          <Button variant="ghost" size="icon" onClick={() => openEdit(s)}><Edit2 className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="icon" onClick={() => setDeleteId(s.id)}><Trash2 className="h-4 w-4" /></Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </ScrollArea>
+          </Card>
+        </div>
+
+        {detailId && selectedStk && (
+          <div className="lg:col-span-1">
+            <Card>
+              <CardContent className="p-4">
+                <h3 className="font-semibold text-lg">{selectedStk.name}</h3>
+                <Badge className={`mt-1 ${stakeholderTypeColors[selectedStk.stakeholder_type]}`}>{stakeholderTypeLabels[selectedStk.stakeholder_type]}</Badge>
+                {selectedStk.role_title && <p className="text-sm mt-2">{selectedStk.role_title}</p>}
+                {selectedStk.email && <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1"><Mail className="h-3 w-3" /> {selectedStk.email}</p>}
+                {selectedStk.phone && <p className="text-sm text-muted-foreground flex items-center gap-1"><Phone className="h-3 w-3" /> {selectedStk.phone}</p>}
+                {selectedStk.organization_id && <p className="text-sm mt-2">Org: {orgName(selectedStk.organization_id)}</p>}
+                {selectedStk.notes && <p className="text-sm text-muted-foreground mt-2">{selectedStk.notes}</p>}
+              </CardContent>
+            </Card>
+            <RelatedEntities entityType="stakeholder" entityId={detailId} />
+          </div>
+        )}
+      </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-lg">
@@ -179,7 +189,7 @@ const CeoStakeholders = () => {
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader><AlertDialogTitle>Confirmar exclusão?</AlertDialogTitle><AlertDialogDescription>Esta ação não pode ser desfeita.</AlertDialogDescription></AlertDialogHeader>
-          <AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={handleDelete}>Excluir</AlertDialogAction></AlertDialogFooter>
+          <AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={() => { if (deleteId) { remove(deleteId); setDeleteId(null); } }}>Excluir</AlertDialogAction></AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </div>

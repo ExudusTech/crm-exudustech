@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { useCeoTable } from "@/hooks/use-ceo-table";
 import { CeoStatus, PriorityLevel, ceoStatusLabels, priorityLabels, priorityColors, statusColors } from "@/types/ceo";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -12,29 +13,21 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Search, Trash2, FolderKanban } from "lucide-react";
+import { Plus, Search, Trash2, FolderKanban, Edit2 } from "lucide-react";
+import { EntitySelector } from "@/components/ceo/EntitySelector";
+import { RelatedEntities } from "@/components/ceo/RelatedEntities";
 
 interface Project {
-  id: string;
-  name: string;
-  initiative_id: string | null;
-  product_id: string | null;
-  responsible: string | null;
-  status: CeoStatus;
-  priority: PriorityLevel | null;
-  start_date: string | null;
-  end_date: string | null;
-  scope_summary: string | null;
-  main_risk: string | null;
-  next_action: string | null;
-  notes: string | null;
-  created_at: string;
-  updated_at: string;
+  id: string; name: string; initiative_id: string | null; product_id: string | null;
+  responsible: string | null; status: CeoStatus; priority: PriorityLevel | null;
+  start_date: string | null; end_date: string | null; scope_summary: string | null;
+  main_risk: string | null; next_action: string | null; notes: string | null;
+  created_at: string; updated_at: string;
 }
 
 const emptyItem: Partial<Project> = {
   name: "", status: "ativo", priority: "media", responsible: "", scope_summary: "",
-  main_risk: "", next_action: "", notes: "",
+  main_risk: "", next_action: "", notes: "", initiative_id: null, product_id: null,
 };
 
 const CeoProjetos = () => {
@@ -44,6 +37,17 @@ const CeoProjetos = () => {
   const [editing, setEditing] = useState<Partial<Project>>(emptyItem);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [detailId, setDetailId] = useState<string | null>(null);
+
+  // Names for display
+  const [iniNames, setIniNames] = useState<Record<string, string>>({});
+  useEffect(() => {
+    (supabase as any).from("initiatives").select("id, name").then(({ data: d }: any) => {
+      const map: Record<string, string> = {};
+      (d || []).forEach((i: any) => { map[i.id] = i.name; });
+      setIniNames(map);
+    });
+  }, []);
 
   const filtered = data.filter(i => {
     if (search && !i.name.toLowerCase().includes(search.toLowerCase())) return false;
@@ -65,6 +69,8 @@ const CeoProjetos = () => {
     }
     setDialogOpen(false);
   };
+
+  const selectedProj = data.find(p => p.id === detailId);
 
   if (loading) return <div className="p-6 max-w-7xl mx-auto"><Skeleton className="h-8 w-48 mb-4" /><Skeleton className="h-[300px] w-full" /></div>;
 
@@ -92,44 +98,67 @@ const CeoProjetos = () => {
         </Select>
       </div>
 
-      <Card>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nome</TableHead>
-              <TableHead>Responsável</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Prioridade</TableHead>
-              <TableHead>Início</TableHead>
-              <TableHead>Fim</TableHead>
-              <TableHead className="w-[80px]" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filtered.length === 0 ? (
-              <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Nenhum projeto encontrado.</TableCell></TableRow>
-            ) : filtered.map(item => (
-              <TableRow key={item.id} className="cursor-pointer hover:bg-accent/50" onClick={() => openEdit(item)}>
-                <TableCell className="font-medium">{item.name}</TableCell>
-                <TableCell className="text-sm text-muted-foreground">{item.responsible || "—"}</TableCell>
-                <TableCell><Badge className={statusColors[item.status]}>{ceoStatusLabels[item.status]}</Badge></TableCell>
-                <TableCell>{item.priority && <Badge className={priorityColors[item.priority]}>{priorityLabels[item.priority]}</Badge>}</TableCell>
-                <TableCell className="text-sm text-muted-foreground">{item.start_date || "—"}</TableCell>
-                <TableCell className="text-sm text-muted-foreground">{item.end_date || "—"}</TableCell>
-                <TableCell>
-                  <Button size="icon" variant="ghost" className="text-destructive" onClick={e => { e.stopPropagation(); setDeleteId(item.id); }}><Trash2 className="h-4 w-4" /></Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </Card>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className={detailId ? "lg:col-span-2" : "lg:col-span-3"}>
+          <Card>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nome</TableHead><TableHead>Iniciativa</TableHead><TableHead>Responsável</TableHead>
+                  <TableHead>Status</TableHead><TableHead>Prioridade</TableHead><TableHead className="w-[80px]" />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filtered.length === 0 ? (
+                  <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Nenhum projeto encontrado.</TableCell></TableRow>
+                ) : filtered.map(item => (
+                  <TableRow
+                    key={item.id}
+                    className={`cursor-pointer hover:bg-accent/50 ${detailId === item.id ? "bg-muted/50" : ""}`}
+                    onClick={() => setDetailId(detailId === item.id ? null : item.id)}
+                  >
+                    <TableCell className="font-medium">{item.name}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{item.initiative_id ? iniNames[item.initiative_id] || "—" : "—"}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{item.responsible || "—"}</TableCell>
+                    <TableCell><Badge className={statusColors[item.status]}>{ceoStatusLabels[item.status]}</Badge></TableCell>
+                    <TableCell>{item.priority && <Badge className={priorityColors[item.priority]}>{priorityLabels[item.priority]}</Badge>}</TableCell>
+                    <TableCell>
+                      <div className="flex gap-1" onClick={e => e.stopPropagation()}>
+                        <Button size="icon" variant="ghost" onClick={() => openEdit(item)}><Edit2 className="h-4 w-4" /></Button>
+                        <Button size="icon" variant="ghost" className="text-destructive" onClick={() => setDeleteId(item.id)}><Trash2 className="h-4 w-4" /></Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Card>
+        </div>
+
+        {detailId && selectedProj && (
+          <div className="lg:col-span-1">
+            <Card>
+              <CardContent className="p-4">
+                <h3 className="font-semibold text-lg">{selectedProj.name}</h3>
+                <Badge className={`mt-1 ${statusColors[selectedProj.status]}`}>{ceoStatusLabels[selectedProj.status]}</Badge>
+                {selectedProj.responsible && <p className="text-sm mt-2">Responsável: {selectedProj.responsible}</p>}
+                {selectedProj.scope_summary && <p className="text-sm text-muted-foreground mt-2">{selectedProj.scope_summary}</p>}
+                {selectedProj.start_date && <p className="text-sm mt-1">Início: {selectedProj.start_date}</p>}
+                {selectedProj.end_date && <p className="text-sm">Fim: {selectedProj.end_date}</p>}
+              </CardContent>
+            </Card>
+            <RelatedEntities entityType="project" entityId={detailId} />
+          </div>
+        )}
+      </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{editing.id ? "Editar Projeto" : "Novo Projeto"}</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div><Label>Nome *</Label><Input value={editing.name || ""} onChange={e => setEditing(p => ({ ...p, name: e.target.value }))} /></div>
+            <EntitySelector label="Iniciativa vinculada" tableName="initiatives" value={editing.initiative_id || null} onChange={v => setEditing(p => ({ ...p, initiative_id: v }))} />
+            <EntitySelector label="Produto vinculado" tableName="products" value={editing.product_id || null} onChange={v => setEditing(p => ({ ...p, product_id: v }))} />
             <div><Label>Responsável</Label><Input value={editing.responsible || ""} onChange={e => setEditing(p => ({ ...p, responsible: e.target.value }))} /></div>
             <div className="grid grid-cols-2 gap-3">
               <div><Label>Status</Label>

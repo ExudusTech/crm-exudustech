@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useCeoTable } from "@/hooks/use-ceo-table";
 import { CeoStatus, ceoStatusLabels, statusColors } from "@/types/ceo";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -12,23 +12,14 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Search, Trash2, Package } from "lucide-react";
+import { Plus, Search, Trash2, Package, Edit2 } from "lucide-react";
+import { RelatedEntities } from "@/components/ceo/RelatedEntities";
 
 interface Product {
-  id: string;
-  name: string;
-  description: string | null;
-  category: string | null;
-  status: CeoStatus;
-  price: number | null;
-  commercial_model: string | null;
-  value_message: string | null;
-  benchmark: string | null;
-  modularity_notes: string | null;
-  notes: string | null;
-  pilot_organization_id: string | null;
-  created_at: string;
-  updated_at: string;
+  id: string; name: string; description: string | null; category: string | null;
+  status: CeoStatus; price: number | null; commercial_model: string | null;
+  value_message: string | null; benchmark: string | null; modularity_notes: string | null;
+  notes: string | null; pilot_organization_id: string | null; created_at: string; updated_at: string;
 }
 
 const emptyItem: Partial<Product> = {
@@ -42,9 +33,9 @@ const CeoProdutos = () => {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [editing, setEditing] = useState<Partial<Product>>(emptyItem);
   const [search, setSearch] = useState("");
+  const [detailId, setDetailId] = useState<string | null>(null);
 
   const filtered = data.filter(i => !search || i.name.toLowerCase().includes(search.toLowerCase()));
-
   const openCreate = () => { setEditing({ ...emptyItem }); setDialogOpen(true); };
   const openEdit = (item: Product) => { setEditing({ ...item }); setDialogOpen(true); };
 
@@ -59,6 +50,8 @@ const CeoProdutos = () => {
     }
     setDialogOpen(false);
   };
+
+  const selectedProd = data.find(p => p.id === detailId);
 
   if (loading) return <div className="p-6 max-w-7xl mx-auto"><Skeleton className="h-8 w-48 mb-4" /><Skeleton className="h-[300px] w-full" /></div>;
 
@@ -79,36 +72,57 @@ const CeoProdutos = () => {
         </div>
       </div>
 
-      <Card>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Nome</TableHead>
-              <TableHead>Categoria</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Modelo Comercial</TableHead>
-              <TableHead>Preço</TableHead>
-              <TableHead className="w-[80px]" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filtered.length === 0 ? (
-              <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Nenhum produto encontrado.</TableCell></TableRow>
-            ) : filtered.map(item => (
-              <TableRow key={item.id} className="cursor-pointer hover:bg-accent/50" onClick={() => openEdit(item)}>
-                <TableCell className="font-medium">{item.name}</TableCell>
-                <TableCell className="text-sm text-muted-foreground">{item.category || "—"}</TableCell>
-                <TableCell><Badge className={statusColors[item.status]}>{ceoStatusLabels[item.status]}</Badge></TableCell>
-                <TableCell className="text-sm text-muted-foreground">{item.commercial_model || "—"}</TableCell>
-                <TableCell className="text-sm">{item.price ? `R$ ${item.price.toLocaleString("pt-BR")}` : "—"}</TableCell>
-                <TableCell>
-                  <Button size="icon" variant="ghost" className="text-destructive" onClick={e => { e.stopPropagation(); setDeleteId(item.id); }}><Trash2 className="h-4 w-4" /></Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </Card>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className={detailId ? "lg:col-span-2" : "lg:col-span-3"}>
+          <Card>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nome</TableHead><TableHead>Categoria</TableHead><TableHead>Status</TableHead>
+                  <TableHead>Modelo</TableHead><TableHead className="w-[80px]" />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filtered.length === 0 ? (
+                  <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">Nenhum produto encontrado.</TableCell></TableRow>
+                ) : filtered.map(item => (
+                  <TableRow
+                    key={item.id}
+                    className={`cursor-pointer hover:bg-accent/50 ${detailId === item.id ? "bg-muted/50" : ""}`}
+                    onClick={() => setDetailId(detailId === item.id ? null : item.id)}
+                  >
+                    <TableCell className="font-medium">{item.name}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{item.category || "—"}</TableCell>
+                    <TableCell><Badge className={statusColors[item.status]}>{ceoStatusLabels[item.status]}</Badge></TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{item.commercial_model || "—"}</TableCell>
+                    <TableCell>
+                      <div className="flex gap-1" onClick={e => e.stopPropagation()}>
+                        <Button size="icon" variant="ghost" onClick={() => openEdit(item)}><Edit2 className="h-4 w-4" /></Button>
+                        <Button size="icon" variant="ghost" className="text-destructive" onClick={() => setDeleteId(item.id)}><Trash2 className="h-4 w-4" /></Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Card>
+        </div>
+
+        {detailId && selectedProd && (
+          <div className="lg:col-span-1">
+            <Card>
+              <CardContent className="p-4">
+                <h3 className="font-semibold text-lg">{selectedProd.name}</h3>
+                <Badge className={`mt-1 ${statusColors[selectedProd.status]}`}>{ceoStatusLabels[selectedProd.status]}</Badge>
+                {selectedProd.description && <p className="text-sm text-muted-foreground mt-2">{selectedProd.description}</p>}
+                {selectedProd.value_message && <p className="text-sm mt-2"><strong>Valor:</strong> {selectedProd.value_message}</p>}
+                {selectedProd.price && <p className="text-sm mt-1"><strong>Preço:</strong> R$ {selectedProd.price.toLocaleString("pt-BR")}</p>}
+              </CardContent>
+            </Card>
+            <RelatedEntities entityType="product" entityId={detailId} />
+          </div>
+        )}
+      </div>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">

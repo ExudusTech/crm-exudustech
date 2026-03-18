@@ -2,69 +2,93 @@ import { useState, useRef, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Bot, Send, User, Loader2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Bot, Send, User, Loader2, Volume2, VolumeX, Plus, Calendar, DollarSign, ListTodo, Radar } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import ReactMarkdown from "react-markdown";
 
 interface Message {
   role: "user" | "assistant";
   content: string;
+  createdEntities?: string[];
 }
 
+const quickCommands = [
+  { icon: Radar, label: "Radar completo", prompt: "Me dê um panorama completo do radar estratégico da ExudusTech agora." },
+  { icon: ListTodo, label: "Tarefas atrasadas", prompt: "Quais tarefas estão atrasadas ou bloqueadas?" },
+  { icon: Calendar, label: "Agenda de hoje", prompt: "Como está minha agenda de hoje?" },
+  { icon: DollarSign, label: "Como está o caixa", prompt: "Como está o caixa da empresa?" },
+  { icon: Plus, label: "Cadastrar iniciativa", prompt: "Quero cadastrar uma nova iniciativa." },
+];
+
 const CeoIA = () => {
+  const { toast } = useToast();
   const [messages, setMessages] = useState<Message[]>([
-    { role: "assistant", content: "Olá! Sou o assistente IA do Sistema CEO. Posso ajudar com análises estratégicas, resumos de iniciativas, sugestões de próximos passos e mais. Como posso ajudar?" },
+    { role: "assistant", content: "Olá! Sou o assistente IA do Sistema CEO. Posso ajudar com:\n\n- 📊 **Análises estratégicas** e resumos\n- 📝 **Cadastrar entidades** (iniciativas, organizações, stakeholders, tarefas)\n- 🔗 **Vincular entidades** entre si\n- 📅 **Consultar agenda** e pendências\n- 💰 **Analisar finanças**\n\nDigite sua solicitação ou use os atalhos abaixo." },
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [voiceEnabled, setVoiceEnabled] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages]);
 
-  const sendMessage = async () => {
-    const text = input.trim();
-    if (!text || loading) return;
+  const speak = (text: string) => {
+    if (!voiceEnabled || !("speechSynthesis" in window)) return;
+    window.speechSynthesis.cancel();
+    const clean = text.replace(/[#*_`\[\]]/g, "").replace(/\n+/g, ". ");
+    const utterance = new SpeechSynthesisUtterance(clean);
+    utterance.lang = "pt-BR";
+    utterance.rate = 1.1;
+    window.speechSynthesis.speak(utterance);
+  };
 
-    const userMsg: Message = { role: "user", content: text };
+  const sendMessage = async (text?: string) => {
+    const msg = (text || input).trim();
+    if (!msg || loading) return;
+
+    const userMsg: Message = { role: "user", content: msg };
     const updatedMessages = [...messages, userMsg];
     setMessages(updatedMessages);
     setInput("");
     setLoading(true);
 
     try {
-      // Fetch context data for the AI
-      const [initiatives, tasks, orgs] = await Promise.all([
-        (supabase as any).from("initiatives").select("name, status, priority, next_action, main_risk").eq("status", "ativo").limit(10),
-        (supabase as any).from("ceo_tasks").select("title, status, priority, deadline, responsible").in("status", ["todo", "doing", "bloqueado"]).limit(15),
-        (supabase as any).from("organizations").select("name, type, status").eq("status", "ativo").limit(10),
-      ]);
-
-      const context = `
-Contexto atual do CEO:
-- Iniciativas ativas: ${JSON.stringify(initiatives.data || [])}
-- Tarefas pendentes: ${JSON.stringify(tasks.data || [])}
-- Organizações ativas: ${JSON.stringify(orgs.data || [])}
-      `.trim();
-
-      const { data, error } = await supabase.functions.invoke("generate-whatsapp-message", {
+      const { data, error } = await supabase.functions.invoke("ceo-ai-assistant", {
         body: {
-          prompt: `Você é um assistente executivo de CEO de uma empresa de tecnologia chamada ExudusTech. 
-Responda em português brasileiro, de forma objetiva e estratégica.
-
-${context}
-
-Histórico da conversa:
-${updatedMessages.map((m) => `${m.role === "user" ? "CEO" : "Assistente"}: ${m.content}`).join("\n")}
-
-Responda à última mensagem do CEO de forma útil e estratégica.`,
+          messages: updatedMessages
+            .filter(m => m.role === "user" || m.role === "assistant")
+            .map(m => ({ role: m.role, content: m.content })),
         },
       });
 
-      const reply = data?.message || data?.reply || "Desculpe, não consegui processar sua solicitação no momento.";
-      setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
-    } catch {
-      setMessages((prev) => [...prev, { role: "assistant", content: "Erro ao processar. Tente novamente." }]);
+      if (error) throw error;
+
+      const reply = data?.reply || "Desculpe, não consegui processar.";
+      const createdEntities = data?.created_entities || [];
+
+      if (createdEntities.length > 0) {
+        toast({
+          title: `${createdEntities.length} entidade(s) criada(s)`,
+          description: createdEntities.join(", "),
+        });
+      }
+
+      const assistantMsg: Message = { role: "assistant", content: reply, createdEntities };
+      setMessages(prev => [...prev, assistantMsg]);
+      speak(reply);
+    } catch (err: any) {
+      const errorMsg = err?.message?.includes("429")
+        ? "Muitas requisições. Aguarde um momento e tente novamente."
+        : err?.message?.includes("402")
+        ? "Créditos esgotados. Adicione créditos na configuração."
+        : "Erro ao processar. Tente novamente.";
+      setMessages(prev => [...prev, { role: "assistant", content: errorMsg }]);
     } finally {
       setLoading(false);
     }
@@ -72,9 +96,33 @@ Responda à última mensagem do CEO de forma útil e estratégica.`,
 
   return (
     <div className="p-6 max-w-4xl mx-auto flex flex-col h-[calc(100vh-4rem)]">
-      <div className="mb-4">
-        <h1 className="text-2xl font-bold text-foreground">IA / Assistente CEO</h1>
-        <p className="text-muted-foreground text-sm">Área conversacional do sistema</p>
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">IA / Assistente CEO</h1>
+          <p className="text-muted-foreground text-sm">Cadastro assistido, consultas e análises estratégicas</p>
+        </div>
+        <div className="flex items-center gap-2">
+          {voiceEnabled ? <Volume2 className="h-4 w-4 text-primary" /> : <VolumeX className="h-4 w-4 text-muted-foreground" />}
+          <Switch checked={voiceEnabled} onCheckedChange={setVoiceEnabled} />
+          <Label className="text-xs text-muted-foreground">Voz</Label>
+        </div>
+      </div>
+
+      {/* Quick commands */}
+      <div className="flex flex-wrap gap-2 mb-3">
+        {quickCommands.map((cmd, i) => (
+          <Button
+            key={i}
+            variant="outline"
+            size="sm"
+            className="text-xs"
+            onClick={() => sendMessage(cmd.prompt)}
+            disabled={loading}
+          >
+            <cmd.icon className="h-3 w-3 mr-1" />
+            {cmd.label}
+          </Button>
+        ))}
       </div>
 
       <Card className="flex-1 flex flex-col min-h-0">
@@ -87,12 +135,25 @@ Responda à última mensagem do CEO de forma útil e estratégica.`,
                     <Bot className="h-4 w-4 text-primary-foreground" />
                   </div>
                 )}
-                <div className={`max-w-[75%] rounded-lg px-4 py-3 text-sm whitespace-pre-wrap ${
+                <div className={`max-w-[75%] rounded-lg px-4 py-3 text-sm ${
                   msg.role === "user"
                     ? "bg-primary text-primary-foreground"
                     : "bg-muted text-foreground"
                 }`}>
-                  {msg.content}
+                  {msg.role === "assistant" ? (
+                    <div className="prose prose-sm dark:prose-invert max-w-none">
+                      <ReactMarkdown>{msg.content}</ReactMarkdown>
+                    </div>
+                  ) : (
+                    <span className="whitespace-pre-wrap">{msg.content}</span>
+                  )}
+                  {msg.createdEntities && msg.createdEntities.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {msg.createdEntities.map((e, j) => (
+                        <Badge key={j} variant="outline" className="text-[10px]">{e}</Badge>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 {msg.role === "user" && (
                   <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center shrink-0">
@@ -115,14 +176,14 @@ Responda à última mensagem do CEO de forma útil e estratégica.`,
 
           <div className="border-t p-4 flex gap-2">
             <Textarea
-              placeholder="Digite sua mensagem..."
+              placeholder="Digite sua mensagem... (ex: 'Cadastrar iniciativa HMK IA com André como stakeholder')"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
               className="resize-none min-h-[44px] max-h-[120px]"
               rows={1}
             />
-            <Button onClick={sendMessage} disabled={loading || !input.trim()} size="icon" className="shrink-0">
+            <Button onClick={() => sendMessage()} disabled={loading || !input.trim()} size="icon" className="shrink-0">
               <Send className="h-4 w-4" />
             </Button>
           </div>
