@@ -41,6 +41,7 @@ const emptyItem: Partial<Initiative> = {
 };
 
 const CeoIniciativas = () => {
+  const navigate = useNavigate();
   const { data, loading, insert, update, remove } = useCeoTable<Initiative>("initiatives");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
