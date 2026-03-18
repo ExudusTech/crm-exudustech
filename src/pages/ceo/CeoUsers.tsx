@@ -287,7 +287,9 @@ const CeoUsers = () => {
                         </Select>
                       )}
                     </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">{u.role_function || "—"}</TableCell>
+                    <TableCell className="text-muted-foreground text-sm">
+                      {u.roles.includes("admin") ? "Administrador" : u.roles.includes("manager") ? "Gerente" : "Visualizador"}
+                    </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
                         <Button variant="ghost" size="sm" onClick={() => openPermissions(u)}>

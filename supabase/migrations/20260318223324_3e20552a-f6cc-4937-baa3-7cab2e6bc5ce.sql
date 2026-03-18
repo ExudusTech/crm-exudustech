@@ -1,0 +1,1 @@
+UPDATE public.profiles SET role_function = 'admin' WHERE id = (SELECT id FROM auth.users WHERE email = 'ph@exudustech.com.br');
