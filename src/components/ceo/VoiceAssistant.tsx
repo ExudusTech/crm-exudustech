@@ -154,6 +154,8 @@ export function VoiceAssistant() {
   const toggleListening = useCallback(() => {
     if (listening) {
       recognitionRef.current?.stop();
+      recognitionRef.current = null;
+      listeningRef.current = false;
       setListening(false);
       return;
     }
@@ -166,29 +168,29 @@ export function VoiceAssistant() {
     recognition.lang = "pt-BR";
     recognition.continuous = true;
     recognition.interimResults = true;
-    let finalTranscript = "";
     recognition.onresult = (event: any) => {
-      let interim = "";
       for (let i = event.resultIndex; i < event.results.length; i++) {
-        const transcript = event.results[i][0].transcript;
         if (event.results[i].isFinal) {
-          finalTranscript += " " + transcript;
-          const corrected = correctTranscript(finalTranscript.trim());
+          const transcript = event.results[i][0].transcript;
+          const corrected = correctTranscript(transcript.trim());
           setInput((prev) => (prev ? prev + " " + corrected : corrected));
-          finalTranscript = "";
-        } else {
-          interim += transcript;
         }
       }
     };
-    recognition.onerror = (e: any) => { if (e.error !== "no-speech") setListening(false); };
+    recognition.onerror = (e: any) => {
+      if (e.error !== "no-speech" && e.error !== "aborted") {
+        listeningRef.current = false;
+        setListening(false);
+      }
+    };
     recognition.onend = () => {
-      // Don't auto-stop — restart if still listening
-      if (recognitionRef.current && listening) {
-        try { recognitionRef.current.start(); } catch (_) {}
+      // Auto-restart if user hasn't manually stopped
+      if (listeningRef.current) {
+        try { recognition.start(); } catch (_) {}
       }
     };
     recognitionRef.current = recognition;
+    listeningRef.current = true;
     recognition.start();
     setListening(true);
   }, [listening, toast]);
