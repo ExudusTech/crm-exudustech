@@ -111,6 +111,10 @@ const CeoInitiativeDetail = () => {
     setDecisions(dec.data || []);
     setLessons(les.data || []);
     setModules(mod.data || []);
+    setConversations(convs.data || []);
+    setInterpretations(interps.data || []);
+    setInitiativeActions(acts.data || []);
+    setInitiativeGaps(gps.data || []);
     setRelatedProjects(projects.data || []);
     // Collect unique products from projects
     const prods = (projects.data || []).filter((p: any) => p.products).map((p: any) => p.products);
