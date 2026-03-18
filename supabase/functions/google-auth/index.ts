@@ -190,7 +190,6 @@ serve(async (req) => {
 
     // Disconnect
     if (action === "disconnect") {
-      const body = await req.json();
       const { connection_id } = body;
 
       await supabase.from("google_connections").update({ status: "disconnected" }).eq("id", connection_id);
