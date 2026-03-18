@@ -63,13 +63,13 @@ export const EntitySelector = ({
         const newId = await onCreateInline(inlineData);
         if (newId) {
           onChange(newId);
-          setOptions(prev => [...prev, { id: newId, [nameField]: inlineData[nameField], ...inlineData }]);
+          setOptions(prev => [...prev, { id: newId, name: inlineData[nameField] || "", ...inlineData } as EntityOption]);
         }
       } else {
         const { data, error } = await (supabase as any).from(tableName).insert(inlineData).select("id").single();
         if (!error && data) {
           onChange(data.id);
-          setOptions(prev => [...prev, { id: data.id, [nameField]: inlineData[nameField], ...inlineData }]);
+          setOptions(prev => [...prev, { id: data.id, name: inlineData[nameField] || "", ...inlineData } as EntityOption]);
         }
       }
       setCreating(false);
