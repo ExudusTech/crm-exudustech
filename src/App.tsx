@@ -36,6 +36,7 @@ import CeoDocumentos from "./pages/ceo/CeoDocumentos";
 import CeoModulos from "./pages/ceo/CeoModulos";
 import CeoIA from "./pages/ceo/CeoIA";
 import CeoInitiativeDetail from "./pages/ceo/CeoInitiativeDetail";
+import CeoInitiativeCreate from "./pages/ceo/CeoInitiativeCreate";
 import CeoDecisionsLessons from "./pages/ceo/CeoDecisionsLessons";
 
 const queryClient = new QueryClient();
@@ -59,6 +60,7 @@ const App = () => (
               <Route path="/ceo" element={<WithLayout><CeoDashboard /></WithLayout>} />
               <Route path="/ceo/radar" element={<WithLayout><CeoRadar /></WithLayout>} />
               <Route path="/ceo/iniciativas" element={<WithLayout><CeoIniciativas /></WithLayout>} />
+              <Route path="/ceo/iniciativas/nova" element={<WithLayout><CeoInitiativeCreate /></WithLayout>} />
               <Route path="/ceo/iniciativas/:id" element={<WithLayout><CeoInitiativeDetail /></WithLayout>} />
               <Route path="/ceo/memoria" element={<WithLayout><CeoDecisionsLessons /></WithLayout>} />
               <Route path="/ceo/projetos" element={<WithLayout><CeoProjetos /></WithLayout>} />
