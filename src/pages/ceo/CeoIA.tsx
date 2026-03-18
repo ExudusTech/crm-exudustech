@@ -127,6 +127,11 @@ const CeoIA = () => {
           <p className="text-muted-foreground text-sm">Cadastro assistido, consultas e análises estratégicas</p>
         </div>
         <div className="flex items-center gap-2">
+          {isSpeaking && (
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={stopSpeaking} title="Parar áudio">
+              <Square className="h-4 w-4 fill-current" />
+            </Button>
+          )}
           {voiceEnabled ? <Volume2 className="h-4 w-4 text-primary" /> : <VolumeX className="h-4 w-4 text-muted-foreground" />}
           <Switch checked={voiceEnabled} onCheckedChange={setVoiceEnabled} />
           <Label className="text-xs text-muted-foreground">Voz</Label>
