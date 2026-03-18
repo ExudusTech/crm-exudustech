@@ -42,6 +42,10 @@ const CeoInitiativeDetail = () => {
   const [decisions, setDecisions] = useState<any[]>([]);
   const [lessons, setLessons] = useState<any[]>([]);
   const [modules, setModules] = useState<any[]>([]);
+  const [relatedOrgs, setRelatedOrgs] = useState<{ main?: any; partner?: any; pilot?: any }>({});
+  const [relatedProjects, setRelatedProjects] = useState<any[]>([]);
+  const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
+  const [relatedAsset, setRelatedAsset] = useState<any>(null);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<any>({});
 
@@ -52,7 +56,7 @@ const CeoInitiativeDetail = () => {
   const fetchAll = useCallback(async () => {
     if (!id) return;
     setLoading(true);
-    const [ini, t, sh, doc, inf, rev, exp, hist, dec, les, mod] = await Promise.all([
+    const [ini, t, sh, doc, inf, rev, exp, hist, dec, les, mod, projects] = await Promise.all([
       (supabase as any).from("initiatives").select("*").eq("id", id).single(),
       (supabase as any).from("ceo_tasks").select("*").eq("initiative_id", id).order("created_at", { ascending: false }),
       (supabase as any).from("initiative_stakeholders").select("*, stakeholders(*)").eq("initiative_id", id),
@@ -64,10 +68,33 @@ const CeoInitiativeDetail = () => {
       (supabase as any).from("decisions").select("*").eq("initiative_id", id).order("decided_at", { ascending: false }),
       (supabase as any).from("lessons_learned").select("*").eq("initiative_id", id).order("created_at", { ascending: false }),
       (supabase as any).from("module_usages").select("*, modules(*)").eq("used_in_initiative_id", id),
+      (supabase as any).from("projects").select("*, products(id, name, status)").eq("initiative_id", id),
     ]);
     if (ini.data) {
       setInitiative(ini.data);
       setForm(ini.data);
+      // Fetch related orgs
+      const orgs: any = {};
+      if (ini.data.organization_id) {
+        const { data: o } = await (supabase as any).from("organizations").select("*").eq("id", ini.data.organization_id).single();
+        if (o) orgs.main = o;
+      }
+      if (ini.data.partner_organization_id) {
+        const { data: o } = await (supabase as any).from("organizations").select("*").eq("id", ini.data.partner_organization_id).single();
+        if (o) orgs.partner = o;
+      }
+      if (ini.data.pilot_organization_id) {
+        const { data: o } = await (supabase as any).from("organizations").select("*").eq("id", ini.data.pilot_organization_id).single();
+        if (o) orgs.pilot = o;
+      }
+      setRelatedOrgs(orgs);
+      // Fetch strategic asset
+      if (ini.data.strategic_asset_id) {
+        const { data: a } = await (supabase as any).from("strategic_assets").select("*").eq("id", ini.data.strategic_asset_id).single();
+        if (a) setRelatedAsset(a);
+      } else {
+        setRelatedAsset(null);
+      }
     }
     setTasks(t.data || []);
     setStakeholders(sh.data || []);
@@ -79,6 +106,11 @@ const CeoInitiativeDetail = () => {
     setDecisions(dec.data || []);
     setLessons(les.data || []);
     setModules(mod.data || []);
+    setRelatedProjects(projects.data || []);
+    // Collect unique products from projects
+    const prods = (projects.data || []).filter((p: any) => p.products).map((p: any) => p.products);
+    const uniqueProds = prods.filter((p: any, i: number, arr: any[]) => arr.findIndex((x: any) => x.id === p.id) === i);
+    setRelatedProducts(uniqueProds);
     setLoading(false);
   }, [id]);
 
@@ -225,6 +257,70 @@ const CeoInitiativeDetail = () => {
                   <div><p className="text-xs text-muted-foreground">Notas Estratégicas</p><p className="text-sm">{initiative.strategic_notes || "—"}</p></div>
                 </div>
               )}
+            </CardContent>
+          </Card>
+
+          {/* Vínculos Relacionais */}
+          <Card className="mt-4">
+            <CardHeader className="py-3 px-4">
+              <CardTitle className="text-base">Vínculos</CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 pt-0">
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {/* Organizações */}
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Organização Principal</p>
+                  {relatedOrgs.main ? (
+                    <Badge variant="outline" className="cursor-pointer" onClick={() => navigate("/ceo/organizacoes")}>{relatedOrgs.main.name}</Badge>
+                  ) : <span className="text-sm text-muted-foreground">—</span>}
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Parceiro</p>
+                  {relatedOrgs.partner ? (
+                    <Badge variant="outline" className="cursor-pointer" onClick={() => navigate("/ceo/organizacoes")}>{relatedOrgs.partner.name}</Badge>
+                  ) : <span className="text-sm text-muted-foreground">—</span>}
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Cliente Piloto</p>
+                  {relatedOrgs.pilot ? (
+                    <Badge variant="outline" className="cursor-pointer" onClick={() => navigate("/ceo/organizacoes")}>{relatedOrgs.pilot.name}</Badge>
+                  ) : <span className="text-sm text-muted-foreground">—</span>}
+                </div>
+
+                {/* Ativo Estratégico */}
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Ativo Estratégico</p>
+                  {relatedAsset ? (
+                    <Badge variant="outline">{relatedAsset.name}</Badge>
+                  ) : <span className="text-sm text-muted-foreground">—</span>}
+                </div>
+
+                {/* Produtos */}
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Produtos ({relatedProducts.length})</p>
+                  {relatedProducts.length > 0 ? (
+                    <div className="flex flex-wrap gap-1">
+                      {relatedProducts.map((p: any) => (
+                        <Badge key={p.id} variant="outline" className="cursor-pointer" onClick={() => navigate("/ceo/produtos")}>{p.name}</Badge>
+                      ))}
+                    </div>
+                  ) : <span className="text-sm text-muted-foreground">—</span>}
+                </div>
+
+                {/* Projetos */}
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Projetos ({relatedProjects.length})</p>
+                  {relatedProjects.length > 0 ? (
+                    <div className="flex flex-wrap gap-1">
+                      {relatedProjects.map((p: any) => (
+                        <Badge key={p.id} variant="outline" className="cursor-pointer" onClick={() => navigate("/ceo/projetos")}>
+                          {p.name}
+                        </Badge>
+                      ))}
+                    </div>
+                  ) : <span className="text-sm text-muted-foreground">—</span>}
+                </div>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

@@ -48,6 +48,8 @@ const organizationTypeOptions = [
   { value: "organizacao_mae", label: "Org. Mãe" },
   { value: "unidade", label: "Unidade" },
   { value: "interno", label: "Interno" },
+  { value: "loja", label: "Loja" },
+  { value: "prestador_servico", label: "Prestador de Serviço" },
 ];
 
 const stakeholderTypeOptions = [
