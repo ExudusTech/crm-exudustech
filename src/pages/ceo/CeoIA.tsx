@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Bot, Send, User, Loader2, Volume2, VolumeX, Plus, Calendar, DollarSign, ListTodo, Radar, Mail, HardDrive, MessageSquare } from "lucide-react";
+import { Bot, Send, User, Loader2, Volume2, VolumeX, Plus, Calendar, DollarSign, ListTodo, Radar, Mail, HardDrive, MessageSquare, Square } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
