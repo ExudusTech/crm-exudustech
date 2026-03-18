@@ -24,6 +24,8 @@ const CeoDashboard = () => {
   });
   const [overdueTasks, setOverdueTasks] = useState<any[]>([]);
   const [recentAssets, setRecentAssets] = useState<any[]>([]);
+  const [todayEvents, setTodayEvents] = useState<any[]>([]);
+  const [recentLessons, setRecentLessons] = useState<any[]>([]);
 
   useEffect(() => {
     const load = async () => {
