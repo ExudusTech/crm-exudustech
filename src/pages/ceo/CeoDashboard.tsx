@@ -72,6 +72,8 @@ const CeoDashboard = () => {
       });
       setOverdueTasks(overdue.slice(0, 5));
       setRecentAssets(assets.data || []);
+      setTodayEvents(events.data || []);
+      setRecentLessons(lessons.data || []);
       setLoading(false);
     };
     load();
