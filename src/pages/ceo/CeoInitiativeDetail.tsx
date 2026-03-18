@@ -54,10 +54,6 @@ const CeoInitiativeDetail = () => {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<any>({});
 
-  // History entry dialog
-  const [historyDialog, setHistoryDialog] = useState(false);
-  const [historyForm, setHistoryForm] = useState({ title: "", content: "", entry_type: "atualizacao" });
-
   const fetchAll = useCallback(async () => {
     if (!id) return;
     setLoading(true);
