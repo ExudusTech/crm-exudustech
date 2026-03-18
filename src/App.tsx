@@ -39,6 +39,9 @@ import CeoInitiativeDetail from "./pages/ceo/CeoInitiativeDetail";
 import CeoInitiativeCreate from "./pages/ceo/CeoInitiativeCreate";
 import CeoDecisionsLessons from "./pages/ceo/CeoDecisionsLessons";
 import CeoGoogleIntegration from "./pages/ceo/CeoGoogleIntegration";
+import CeoUsers from "./pages/ceo/CeoUsers";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 
 const queryClient = new QueryClient();
 
