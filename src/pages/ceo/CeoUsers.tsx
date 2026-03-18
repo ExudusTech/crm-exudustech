@@ -109,6 +109,19 @@ const CeoUsers = () => {
 
   const openPermissions = async (u: UserProfile) => {
     setSelectedUser(u);
+    const isUserAdmin = u.roles.includes("admin");
+    
+    if (isUserAdmin) {
+      // Admin has all permissions by default
+      const perms: Record<string, { can_read: boolean; can_write: boolean; can_delete: boolean }> = {};
+      MODULES.forEach(m => {
+        perms[m.key] = { can_read: true, can_write: true, can_delete: true };
+      });
+      setPermissions(perms);
+      setPermissionsOpen(true);
+      return;
+    }
+
     const { data } = await supabase.from("user_permissions").select("*").eq("user_id", u.id);
     
     const perms: Record<string, { can_read: boolean; can_write: boolean; can_delete: boolean }> = {};
