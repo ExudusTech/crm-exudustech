@@ -17,6 +17,7 @@ import NotFound from "./pages/NotFound";
 import Proposal from "./pages/Proposal";
 import Insights from "./pages/Insights";
 import Settings from "./pages/Settings";
+import Profile from "./pages/Profile";
 
 // CEO pages
 import CeoDashboard from "./pages/ceo/CeoDashboard";
