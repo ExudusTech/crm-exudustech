@@ -31,8 +31,9 @@ const quickCommands = [
 
 const CeoIA = () => {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([
-    { role: "assistant", content: "Olá! Sou o assistente IA do Sistema CEO. Posso ajudar com:\n\n- 📊 **Análises estratégicas** e resumos\n- 📝 **Cadastrar entidades** (iniciativas, organizações, stakeholders, tarefas)\n- 🔗 **Vincular entidades** entre si\n- 📅 **Consultar agenda** e pendências\n- 💰 **Analisar finanças**\n\nDigite sua solicitação ou use os atalhos abaixo." },
+    { role: "assistant", content: "Olá! Sou o assistente IA do Sistema CEO. Posso ajudar com:\n\n- 📊 **Análises estratégicas** e resumos\n- 📝 **Cadastrar entidades** (iniciativas, organizações, stakeholders, tarefas)\n- 📅 **Consultar e gerenciar sua agenda** (Google Calendar)\n- 📧 **Ler e enviar emails** (Gmail)\n- 📁 **Acessar arquivos** (Google Drive)\n- 💬 **Enviar WhatsApp** via CRM\n- 🔗 **Vincular entidades** entre si\n- 💰 **Analisar finanças**\n\nDigite sua solicitação ou use os atalhos abaixo." },
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
