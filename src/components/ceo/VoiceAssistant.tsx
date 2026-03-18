@@ -48,6 +48,7 @@ export function VoiceAssistant() {
   const [voiceEnabled, setVoiceEnabled] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
+  const listeningRef = useRef(false);
 
   // Drag state
   const [position, setPosition] = useState<{ x: number; y: number }>({
@@ -153,6 +154,8 @@ export function VoiceAssistant() {
   const toggleListening = useCallback(() => {
     if (listening) {
       recognitionRef.current?.stop();
+      recognitionRef.current = null;
+      listeningRef.current = false;
       setListening(false);
       return;
     }
@@ -163,16 +166,31 @@ export function VoiceAssistant() {
     }
     const recognition = new SpeechRecognition();
     recognition.lang = "pt-BR";
-    recognition.continuous = false;
-    recognition.interimResults = false;
+    recognition.continuous = true;
+    recognition.interimResults = true;
     recognition.onresult = (event: any) => {
-      const corrected = correctTranscript(event.results[0][0].transcript);
-      setInput((prev) => (prev ? prev + " " + corrected : corrected));
-      setListening(false);
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        if (event.results[i].isFinal) {
+          const transcript = event.results[i][0].transcript;
+          const corrected = correctTranscript(transcript.trim());
+          setInput((prev) => (prev ? prev + " " + corrected : corrected));
+        }
+      }
     };
-    recognition.onerror = () => setListening(false);
-    recognition.onend = () => setListening(false);
+    recognition.onerror = (e: any) => {
+      if (e.error !== "no-speech" && e.error !== "aborted") {
+        listeningRef.current = false;
+        setListening(false);
+      }
+    };
+    recognition.onend = () => {
+      // Auto-restart if user hasn't manually stopped
+      if (listeningRef.current) {
+        try { recognition.start(); } catch (_) {}
+      }
+    };
     recognitionRef.current = recognition;
+    listeningRef.current = true;
     recognition.start();
     setListening(true);
   }, [listening, toast]);
