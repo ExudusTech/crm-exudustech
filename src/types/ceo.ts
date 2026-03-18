@@ -1,9 +1,9 @@
 // CEO Domain Types - matching database enums and tables
 
-export type OrganizationType = 'cliente' | 'parceiro' | 'piloto' | 'instituicao' | 'organizacao_mae' | 'unidade' | 'interno';
+export type OrganizationType = 'cliente' | 'parceiro' | 'piloto' | 'instituicao' | 'organizacao_mae' | 'unidade' | 'interno' | 'loja' | 'prestador_servico';
 export type StrategicAssetType = 'ideia' | 'oportunidade' | 'sistema' | 'agente' | 'produto' | 'framework' | 'ativo_adquirido' | 'ativo_conhecimento';
 export type PriorityLevel = 'critica' | 'alta' | 'media' | 'baixa';
-export type CeoStatus = 'ativo' | 'pausado' | 'concluido' | 'cancelado' | 'em_analise' | 'arquivado';
+export type CeoStatus = 'ativo' | 'pausado' | 'concluido' | 'cancelado' | 'em_analise' | 'arquivado' | 'em_andamento' | 'em_validacao' | 'incubando' | 'esfriado' | 'aguardando_retorno' | 'entregue' | 'articulacao_estrategica' | 'adquirido_nao_implantado' | 'bloqueado';
 export type TaskStatus = 'todo' | 'doing' | 'done' | 'bloqueado' | 'aguardando_terceiro' | 'pausado';
 export type StakeholderType = 'decisor' | 'operacional' | 'tecnico' | 'comercial' | 'aprovador' | 'consultor' | 'outro';
 export type FinancialStatus = 'pendente' | 'pago' | 'recebido' | 'atrasado' | 'cancelado' | 'parcial';
@@ -69,6 +69,8 @@ export const organizationTypeLabels: Record<OrganizationType, string> = {
   organizacao_mae: 'Org. Mãe',
   unidade: 'Unidade',
   interno: 'Interno',
+  loja: 'Loja',
+  prestador_servico: 'Prestador de Serviço',
 };
 
 export const assetTypeLabels: Record<StrategicAssetType, string> = {
@@ -96,6 +98,15 @@ export const ceoStatusLabels: Record<CeoStatus, string> = {
   cancelado: 'Cancelado',
   em_analise: 'Em Análise',
   arquivado: 'Arquivado',
+  em_andamento: 'Em andamento',
+  em_validacao: 'Em validação',
+  incubando: 'Em incubação',
+  esfriado: 'Esfriado',
+  aguardando_retorno: 'Aguardando retorno',
+  entregue: 'Entregue',
+  articulacao_estrategica: 'Articulação estratégica',
+  adquirido_nao_implantado: 'Adquirido, não implantado',
+  bloqueado: 'Bloqueado',
 };
 
 export const taskStatusLabels: Record<TaskStatus, string> = {
@@ -105,6 +116,13 @@ export const taskStatusLabels: Record<TaskStatus, string> = {
   bloqueado: 'Bloqueado',
   aguardando_terceiro: 'Aguardando',
   pausado: 'Pausado',
+};
+
+export const potentialLabels: Record<string, string> = {
+  muito_alto: 'Muito alto',
+  alto: 'Alto',
+  medio: 'Médio',
+  baixo: 'Baixo',
 };
 
 export const priorityColors: Record<PriorityLevel, string> = {
@@ -121,6 +139,15 @@ export const statusColors: Record<CeoStatus, string> = {
   cancelado: 'bg-muted text-muted-foreground',
   em_analise: 'bg-purple-600 text-white',
   arquivado: 'bg-muted text-muted-foreground',
+  em_andamento: 'bg-blue-500 text-white',
+  em_validacao: 'bg-amber-500 text-white',
+  incubando: 'bg-indigo-500 text-white',
+  esfriado: 'bg-slate-400 text-white',
+  aguardando_retorno: 'bg-orange-400 text-white',
+  entregue: 'bg-emerald-600 text-white',
+  articulacao_estrategica: 'bg-violet-600 text-white',
+  adquirido_nao_implantado: 'bg-teal-500 text-white',
+  bloqueado: 'bg-red-700 text-white',
 };
 
 export const taskStatusColors: Record<TaskStatus, string> = {
