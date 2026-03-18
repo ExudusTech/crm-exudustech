@@ -36,6 +36,133 @@ const recurrenceLabels: Record<RecurrenceType, string> = {
 
 const fmt = (v: number | null) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v || 0);
 
+// === Cashflow Sub-Component ===
+function CashflowSection({ revenues, expenses, subscriptions, bankAccounts }: { revenues: any[]; expenses: any[]; subscriptions: any[]; bankAccounts: any[] }) {
+  const totalBalance = bankAccounts.reduce((s: number, a: any) => s + (a.current_balance || 0), 0);
+  const monthlySubs = subscriptions.filter((s: any) => s.status === "ativo").reduce((s: number, sub: any) => s + (sub.monthly_amount || 0), 0);
+
+  // Group by month for next 3 months
+  const months: { label: string; inflow: number; outflow: number }[] = [];
+  const now = new Date();
+  for (let i = 0; i < 3; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+    const monthStr = d.toISOString().slice(0, 7);
+    const label = d.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+    const inflow = revenues.filter((r: any) => r.due_date?.startsWith(monthStr) && r.status !== "cancelado").reduce((s: number, r: any) => s + (r.expected_amount || 0), 0);
+    const outflow = expenses.filter((e: any) => e.due_date?.startsWith(monthStr) && e.status !== "cancelado").reduce((s: number, e: any) => s + (e.amount || 0), 0) + monthlySubs;
+    months.push({ label, inflow, outflow });
+  }
+
+  let runningBalance = totalBalance;
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader><CardTitle className="text-base">Projeção 30/60/90 dias</CardTitle></CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader><TableRow><TableHead>Período</TableHead><TableHead>Entradas Previstas</TableHead><TableHead>Saídas Previstas</TableHead><TableHead>Saldo Projetado</TableHead></TableRow></TableHeader>
+            <TableBody>
+              {months.map(m => {
+                runningBalance = runningBalance + m.inflow - m.outflow;
+                return (
+                  <TableRow key={m.label}>
+                    <TableCell className="font-medium capitalize">{m.label}</TableCell>
+                    <TableCell className="text-green-600">{fmt(m.inflow)}</TableCell>
+                    <TableCell className="text-destructive">{fmt(m.outflow)}</TableCell>
+                    <TableCell className={`font-semibold ${runningBalance < 0 ? "text-destructive" : ""}`}>{fmt(runningBalance)}</TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+          <p className="text-xs text-muted-foreground mt-2">* Inclui assinaturas ativas ({fmt(monthlySubs)}/mês) nas saídas projetadas</p>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// === Cost Centers Sub-Component ===
+function CostCentersSection() {
+  const [centers, setCenters] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editing, setEditing] = useState<any>({});
+  const { toast } = useToast();
+
+  const fetch = useCallback(async () => {
+    setLoading(true);
+    const { data } = await (supabase as any).from("cost_centers").select("*").order("created_at", { ascending: false });
+    setCenters(data || []);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { fetch(); }, [fetch]);
+
+  const handleSave = async () => {
+    if (!editing.name?.trim()) return;
+    const { id, created_at, ...rest } = editing;
+    if (id) {
+      await (supabase as any).from("cost_centers").update(rest).eq("id", id);
+    } else {
+      await (supabase as any).from("cost_centers").insert(rest);
+    }
+    toast({ title: "Salvo" });
+    setDialogOpen(false);
+    fetch();
+  };
+
+  const handleDelete = async (cid: string) => {
+    await (supabase as any).from("cost_centers").delete().eq("id", cid);
+    toast({ title: "Excluído" });
+    fetch();
+  };
+
+  if (loading) return <Skeleton className="h-[200px] w-full" />;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex justify-end">
+        <Button size="sm" onClick={() => { setEditing({ name: "", description: "" }); setDialogOpen(true); }}>
+          <Plus className="h-4 w-4 mr-1" /> Novo Centro de Custo
+        </Button>
+      </div>
+      <Card>
+        <Table>
+          <TableHeader><TableRow><TableHead>Nome</TableHead><TableHead>Descrição</TableHead><TableHead className="w-20">Ações</TableHead></TableRow></TableHeader>
+          <TableBody>
+            {centers.length === 0 ? (
+              <TableRow><TableCell colSpan={3} className="text-center py-8 text-muted-foreground">Nenhum centro de custo</TableCell></TableRow>
+            ) : centers.map(c => (
+              <TableRow key={c.id} className="cursor-pointer hover:bg-accent/50" onClick={() => { setEditing({ ...c }); setDialogOpen(true); }}>
+                <TableCell className="font-medium">{c.name}</TableCell>
+                <TableCell className="text-sm text-muted-foreground">{c.description || "—"}</TableCell>
+                <TableCell>
+                  <Button variant="ghost" size="icon" onClick={e => { e.stopPropagation(); handleDelete(c.id); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </Card>
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>{editing.id ? "Editar" : "Novo"} Centro de Custo</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div><Label>Nome *</Label><Input value={editing.name || ""} onChange={e => setEditing({ ...editing, name: e.target.value })} /></div>
+            <div><Label>Descrição</Label><Textarea value={editing.description || ""} onChange={e => setEditing({ ...editing, description: e.target.value })} rows={2} /></div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={handleSave} disabled={!editing.name?.trim()}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+
 const CeoFinanceiro = () => {
   const { toast } = useToast();
   const [revenues, setRevenues] = useState<any[]>([]);
@@ -141,12 +268,14 @@ const CeoFinanceiro = () => {
       </div>
 
       <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList>
+        <TabsList className="flex-wrap h-auto gap-1">
           <TabsTrigger value="overview">Visão Geral</TabsTrigger>
           <TabsTrigger value="revenues">Receitas</TabsTrigger>
           <TabsTrigger value="expenses">Despesas</TabsTrigger>
           <TabsTrigger value="subscriptions">Assinaturas</TabsTrigger>
           <TabsTrigger value="accounts">Contas / Cartões</TabsTrigger>
+          <TabsTrigger value="cashflow">Fluxo de Caixa</TabsTrigger>
+          <TabsTrigger value="costcenters">Centros de Custo</TabsTrigger>
         </TabsList>
 
         {/* === VISÃO GERAL === */}
@@ -394,6 +523,16 @@ const CeoFinanceiro = () => {
               {creditCards.length === 0 && <p className="text-sm text-muted-foreground col-span-3">Nenhum cartão cadastrado</p>}
             </div>
           </div>
+        </TabsContent>
+
+        {/* === FLUXO DE CAIXA === */}
+        <TabsContent value="cashflow" className="space-y-4">
+          <CashflowSection revenues={revenues} expenses={expenses} subscriptions={subscriptions} bankAccounts={bankAccounts} />
+        </TabsContent>
+
+        {/* === CENTROS DE CUSTO === */}
+        <TabsContent value="costcenters" className="space-y-4">
+          <CostCentersSection />
         </TabsContent>
       </Tabs>
 

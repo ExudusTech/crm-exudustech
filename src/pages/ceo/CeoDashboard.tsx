@@ -24,11 +24,13 @@ const CeoDashboard = () => {
   });
   const [overdueTasks, setOverdueTasks] = useState<any[]>([]);
   const [recentAssets, setRecentAssets] = useState<any[]>([]);
+  const [todayEvents, setTodayEvents] = useState<any[]>([]);
+  const [recentLessons, setRecentLessons] = useState<any[]>([]);
 
   useEffect(() => {
     const load = async () => {
       setLoading(true);
-      const [initiatives, tasks, orgs, stakeholders, banks, revenues, expenses, subs, assets] = await Promise.all([
+      const [initiatives, tasks, orgs, stakeholders, banks, revenues, expenses, subs, assets, events, lessons] = await Promise.all([
         (supabase as any).from("initiatives").select("id", { count: "exact", head: true }).eq("status", "ativo"),
         (supabase as any).from("ceo_tasks").select("*").in("status", ["todo", "doing", "bloqueado"]),
         (supabase as any).from("organizations").select("id", { count: "exact", head: true }),
@@ -38,6 +40,8 @@ const CeoDashboard = () => {
         (supabase as any).from("expenses").select("amount,status"),
         (supabase as any).from("subscriptions").select("monthly_amount,status"),
         (supabase as any).from("strategic_assets").select("id,name,asset_type,status,priority").order("created_at", { ascending: false }).limit(5),
+        (supabase as any).from("ceo_events").select("*").gte("event_date", new Date().toISOString().slice(0, 10)).lte("event_date", new Date().toISOString().slice(0, 10) + "T23:59:59").order("event_date", { ascending: true }).limit(5),
+        (supabase as any).from("lessons_learned").select("id,title,category,created_at").order("created_at", { ascending: false }).limit(5),
       ]);
 
       const today = new Date().toISOString().slice(0, 10);
@@ -68,6 +72,8 @@ const CeoDashboard = () => {
       });
       setOverdueTasks(overdue.slice(0, 5));
       setRecentAssets(assets.data || []);
+      setTodayEvents(events.data || []);
+      setRecentLessons(lessons.data || []);
       setLoading(false);
     };
     load();
@@ -200,6 +206,47 @@ const CeoDashboard = () => {
                   <div key={a.id} className="flex items-center justify-between border rounded-md p-2">
                     <span className="text-sm font-medium truncate">{a.name}</span>
                     {a.priority && <Badge variant="outline" className="text-xs">{priorityLabels[a.priority as keyof typeof priorityLabels]}</Badge>}
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Agenda do dia + Lições */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader><CardTitle className="flex items-center gap-2 text-base"><CalendarDays className="h-4 w-4" /> Agenda de Hoje</CardTitle></CardHeader>
+          <CardContent>
+            {todayEvents.length === 0 ? (
+              <div className="flex items-center justify-center h-20 text-muted-foreground text-sm">Sem compromissos hoje</div>
+            ) : (
+              <div className="space-y-2">
+                {todayEvents.map((e: any) => (
+                  <div key={e.id} className="flex items-center justify-between border rounded-md p-3">
+                    <div>
+                      <p className="text-sm font-medium">{e.title}</p>
+                      {e.location && <p className="text-xs text-muted-foreground">{e.location}</p>}
+                    </div>
+                    <span className="text-xs text-muted-foreground">{new Date(e.event_date).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader><CardTitle className="flex items-center gap-2 text-base"><TrendingUp className="h-4 w-4" /> Lições Recentes</CardTitle></CardHeader>
+          <CardContent>
+            {recentLessons.length === 0 ? (
+              <div className="flex items-center justify-center h-20 text-muted-foreground text-sm">Nenhuma lição registrada</div>
+            ) : (
+              <div className="space-y-2">
+                {recentLessons.map((l: any) => (
+                  <div key={l.id} className="flex items-center justify-between border rounded-md p-3">
+                    <p className="text-sm font-medium">{l.title}</p>
+                    {l.category && <Badge variant="outline" className="text-xs">{l.category}</Badge>}
                   </div>
                 ))}
               </div>

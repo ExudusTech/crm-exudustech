@@ -55,6 +55,7 @@ const ceoItems = [
   { title: "Stakeholders", url: "/ceo/stakeholders", icon: Users },
   { title: "Tarefas", url: "/ceo/tarefas", icon: CheckSquare },
   { title: "Agenda", url: "/ceo/agenda", icon: CalendarDays },
+  { title: "Memória", url: "/ceo/memoria", icon: Archive },
   { title: "Financeiro", url: "/ceo/financeiro", icon: DollarSign },
   { title: "Fiscal", url: "/ceo/fiscal", icon: Receipt },
   { title: "Infraestrutura", url: "/ceo/infraestrutura", icon: Server },

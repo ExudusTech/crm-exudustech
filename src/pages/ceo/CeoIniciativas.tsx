@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useCeoTable } from "@/hooks/use-ceo-table";
 import { CeoStatus, PriorityLevel, ceoStatusLabels, priorityLabels, priorityColors, statusColors } from "@/types/ceo";
 import { Card, CardContent } from "@/components/ui/card";
@@ -40,6 +41,7 @@ const emptyItem: Partial<Initiative> = {
 };
 
 const CeoIniciativas = () => {
+  const navigate = useNavigate();
   const { data, loading, insert, update, remove } = useCeoTable<Initiative>("initiatives");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -110,7 +112,7 @@ const CeoIniciativas = () => {
             {filtered.length === 0 ? (
               <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Nenhuma iniciativa encontrada.</TableCell></TableRow>
             ) : filtered.map(item => (
-              <TableRow key={item.id} className="cursor-pointer hover:bg-accent/50" onClick={() => openEdit(item)}>
+              <TableRow key={item.id} className="cursor-pointer hover:bg-accent/50" onClick={() => navigate(`/ceo/iniciativas/${item.id}`)}>
                 <TableCell>
                   <p className="font-medium">{item.name}</p>
                   {item.short_name && <p className="text-xs text-muted-foreground">{item.short_name}</p>}
