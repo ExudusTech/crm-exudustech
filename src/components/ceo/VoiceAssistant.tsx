@@ -48,6 +48,7 @@ export function VoiceAssistant() {
   const [voiceEnabled, setVoiceEnabled] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
+  const listeningRef = useRef(false);
 
   // Drag state
   const [position, setPosition] = useState<{ x: number; y: number }>({
