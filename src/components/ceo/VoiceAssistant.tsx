@@ -163,15 +163,30 @@ export function VoiceAssistant() {
     }
     const recognition = new SpeechRecognition();
     recognition.lang = "pt-BR";
-    recognition.continuous = false;
-    recognition.interimResults = false;
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    let finalTranscript = "";
     recognition.onresult = (event: any) => {
-      const corrected = correctTranscript(event.results[0][0].transcript);
-      setInput((prev) => (prev ? prev + " " + corrected : corrected));
-      setListening(false);
+      let interim = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalTranscript += " " + transcript;
+          const corrected = correctTranscript(finalTranscript.trim());
+          setInput((prev) => (prev ? prev + " " + corrected : corrected));
+          finalTranscript = "";
+        } else {
+          interim += transcript;
+        }
+      }
     };
-    recognition.onerror = () => setListening(false);
-    recognition.onend = () => setListening(false);
+    recognition.onerror = (e: any) => { if (e.error !== "no-speech") setListening(false); };
+    recognition.onend = () => {
+      // Don't auto-stop — restart if still listening
+      if (recognitionRef.current && listening) {
+        try { recognitionRef.current.start(); } catch (_) {}
+      }
+    };
     recognitionRef.current = recognition;
     recognition.start();
     setListening(true);
