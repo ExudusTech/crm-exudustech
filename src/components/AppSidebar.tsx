@@ -62,6 +62,7 @@ const ceoItems = [
   { title: "Documentos", url: "/ceo/documentos", icon: FileText },
   { title: "Módulos", url: "/ceo/modulos", icon: Puzzle },
   { title: "IA Assistente", url: "/ceo/ia", icon: Bot },
+  { title: "Usuários", url: "/ceo/usuarios", icon: Users },
 ];
 
 const crmItems = [

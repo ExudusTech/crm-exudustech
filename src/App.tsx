@@ -39,6 +39,9 @@ import CeoInitiativeDetail from "./pages/ceo/CeoInitiativeDetail";
 import CeoInitiativeCreate from "./pages/ceo/CeoInitiativeCreate";
 import CeoDecisionsLessons from "./pages/ceo/CeoDecisionsLessons";
 import CeoGoogleIntegration from "./pages/ceo/CeoGoogleIntegration";
+import CeoUsers from "./pages/ceo/CeoUsers";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 
 const queryClient = new QueryClient();
 
@@ -56,6 +59,8 @@ const App = () => (
           <AuthProvider>
             <Routes>
               <Route path="/auth" element={<Auth />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
 
               {/* CEO Routes */}
               <Route path="/ceo" element={<WithLayout><CeoDashboard /></WithLayout>} />
@@ -77,6 +82,7 @@ const App = () => (
               <Route path="/ceo/modulos" element={<WithLayout><CeoModulos /></WithLayout>} />
               <Route path="/ceo/ia" element={<WithLayout><CeoIA /></WithLayout>} />
               <Route path="/ceo/integracoes/google" element={<WithLayout><CeoGoogleIntegration /></WithLayout>} />
+              <Route path="/ceo/usuarios" element={<WithLayout><CeoUsers /></WithLayout>} />
 
               {/* CRM Routes (preserved) */}
               <Route path="/crm" element={<WithLayout><Opportunities /></WithLayout>} />
