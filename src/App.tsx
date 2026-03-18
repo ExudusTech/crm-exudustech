@@ -59,6 +59,8 @@ const App = () => (
           <AuthProvider>
             <Routes>
               <Route path="/auth" element={<Auth />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
 
               {/* CEO Routes */}
               <Route path="/ceo" element={<WithLayout><CeoDashboard /></WithLayout>} />
