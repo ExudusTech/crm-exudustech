@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      audit_logs: {
+        Row: {
+          action_type: string
+          created_at: string
+          description: string | null
+          entity_id: string | null
+          entity_name: string
+          id: string
+          new_value: Json | null
+          old_value: Json | null
+          source: string
+        }
+        Insert: {
+          action_type?: string
+          created_at?: string
+          description?: string | null
+          entity_id?: string | null
+          entity_name: string
+          id?: string
+          new_value?: Json | null
+          old_value?: Json | null
+          source?: string
+        }
+        Update: {
+          action_type?: string
+          created_at?: string
+          description?: string | null
+          entity_id?: string | null
+          entity_name?: string
+          id?: string
+          new_value?: Json | null
+          old_value?: Json | null
+          source?: string
+        }
+        Relationships: []
+      }
       bank_accounts: {
         Row: {
           bank: string | null
