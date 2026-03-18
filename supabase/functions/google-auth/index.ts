@@ -127,7 +127,6 @@ serve(async (req) => {
     // Refresh token
     if (action === "refresh_token") {
       const { connection_id } = body;
-      const { connection_id } = body;
 
       const { data: conn } = await supabase
         .from("google_connections")
