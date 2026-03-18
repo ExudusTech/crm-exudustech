@@ -1852,6 +1852,15 @@ export type Database = {
         | "cancelado"
         | "em_analise"
         | "arquivado"
+        | "em_andamento"
+        | "em_validacao"
+        | "incubando"
+        | "esfriado"
+        | "aguardando_retorno"
+        | "entregue"
+        | "articulacao_estrategica"
+        | "adquirido_nao_implantado"
+        | "bloqueado"
       document_type:
         | "contrato"
         | "proposta"
@@ -1888,6 +1897,8 @@ export type Database = {
         | "organizacao_mae"
         | "unidade"
         | "interno"
+        | "loja"
+        | "prestador_servico"
       priority_level: "critica" | "alta" | "media" | "baixa"
       recurrence_type:
         | "mensal"
@@ -2053,6 +2064,15 @@ export const Constants = {
         "cancelado",
         "em_analise",
         "arquivado",
+        "em_andamento",
+        "em_validacao",
+        "incubando",
+        "esfriado",
+        "aguardando_retorno",
+        "entregue",
+        "articulacao_estrategica",
+        "adquirido_nao_implantado",
+        "bloqueado",
       ],
       document_type: [
         "contrato",
@@ -2093,6 +2113,8 @@ export const Constants = {
         "organizacao_mae",
         "unidade",
         "interno",
+        "loja",
+        "prestador_servico",
       ],
       priority_level: ["critica", "alta", "media", "baixa"],
       recurrence_type: ["mensal", "trimestral", "semestral", "anual", "avulso"],
