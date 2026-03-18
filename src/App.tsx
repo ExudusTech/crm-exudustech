@@ -101,6 +101,7 @@ const App = () => (
               {/* Shared */}
               <Route path="/proposal" element={<WithLayout><Proposal /></WithLayout>} />
               <Route path="/configuracoes" element={<WithLayout><Settings /></WithLayout>} />
+              <Route path="/perfil" element={<WithLayout><Profile /></WithLayout>} />
 
               {/* Home → CEO Dashboard */}
               <Route path="/" element={<Navigate to="/ceo" replace />} />
