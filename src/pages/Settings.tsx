@@ -1,7 +1,8 @@
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ExternalLink } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import PromptsTab from "@/components/settings/PromptsTab";
 import GeneralSettingsTab from "@/components/settings/GeneralSettingsTab";
 
@@ -21,10 +22,26 @@ const Settings = () => {
         <Tabs defaultValue="prompts" className="w-full">
           <TabsList className="mb-6">
             <TabsTrigger value="prompts">Prompts</TabsTrigger>
+            <TabsTrigger value="integracoes">Integrações</TabsTrigger>
             <TabsTrigger value="general">Outras Configurações</TabsTrigger>
           </TabsList>
           <TabsContent value="prompts">
             <PromptsTab />
+          </TabsContent>
+          <TabsContent value="integracoes">
+            <div className="space-y-4">
+              <Card className="cursor-pointer hover:bg-accent/50 transition-colors" onClick={() => navigate("/ceo/integracoes/google")}>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-lg">Google Workspace</CardTitle>
+                      <CardDescription>Calendar, Gmail e Drive integrados ao Sistema CEO</CardDescription>
+                    </div>
+                    <ExternalLink className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                </CardHeader>
+              </Card>
+            </div>
           </TabsContent>
           <TabsContent value="general">
             <GeneralSettingsTab />

@@ -76,6 +76,7 @@ const App = () => (
               <Route path="/ceo/documentos" element={<WithLayout><CeoDocumentos /></WithLayout>} />
               <Route path="/ceo/modulos" element={<WithLayout><CeoModulos /></WithLayout>} />
               <Route path="/ceo/ia" element={<WithLayout><CeoIA /></WithLayout>} />
+              <Route path="/ceo/integracoes/google" element={<WithLayout><CeoGoogleIntegration /></WithLayout>} />
 
               {/* CRM Routes (preserved) */}
               <Route path="/crm" element={<WithLayout><Opportunities /></WithLayout>} />
