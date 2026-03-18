@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,20 +7,20 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Eye, EyeOff } from 'lucide-react';
 
 const REMEMBERED_EMAIL_KEY = 'autolead_remembered_email';
 
 export default function Auth() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { signIn, user, loading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Load remembered email on mount
   useEffect(() => {
     const savedEmail = localStorage.getItem(REMEMBERED_EMAIL_KEY);
     if (savedEmail) {
@@ -39,11 +39,7 @@ export default function Auth() {
     e.preventDefault();
     
     if (!email || !password) {
-      toast({
-        title: 'Erro',
-        description: 'Preencha email e senha',
-        variant: 'destructive',
-      });
+      toast({ title: 'Erro', description: 'Preencha email e senha', variant: 'destructive' });
       return;
     }
 
@@ -54,30 +50,19 @@ export default function Auth() {
 
       if (error) {
         let message = error.message;
-        
         if (error.message.includes('Invalid login credentials')) {
           message = 'Email ou senha incorretos';
         }
-
-        toast({
-          title: 'Erro',
-          description: message,
-          variant: 'destructive',
-        });
+        toast({ title: 'Erro', description: message, variant: 'destructive' });
       } else {
-        // Save or remove email based on remember me checkbox
         if (rememberMe) {
           localStorage.setItem(REMEMBERED_EMAIL_KEY, email);
         } else {
           localStorage.removeItem(REMEMBERED_EMAIL_KEY);
         }
       }
-    } catch (err) {
-      toast({
-        title: 'Erro',
-        description: 'Ocorreu um erro inesperado',
-        variant: 'destructive',
-      });
+    } catch {
+      toast({ title: 'Erro', description: 'Ocorreu um erro inesperado', variant: 'destructive' });
     } finally {
       setIsSubmitting(false);
     }
@@ -96,9 +81,7 @@ export default function Auth() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold">Entrar</CardTitle>
-          <CardDescription>
-            Faça login para acessar o sistema
-          </CardDescription>
+          <CardDescription>Faça login para acessar o sistema</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -116,35 +99,47 @@ export default function Auth() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Senha</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={isSubmitting}
-                autoComplete="current-password"
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={isSubmitting}
+                  autoComplete="current-password"
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
             </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="remember"
-                checked={rememberMe}
-                onCheckedChange={(checked) => setRememberMe(checked === true)}
-                disabled={isSubmitting}
-              />
-              <Label 
-                htmlFor="remember" 
-                className="text-sm font-normal cursor-pointer"
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="remember"
+                  checked={rememberMe}
+                  onCheckedChange={(checked) => setRememberMe(checked === true)}
+                  disabled={isSubmitting}
+                />
+                <Label htmlFor="remember" className="text-sm font-normal cursor-pointer">
+                  Lembrar meu email
+                </Label>
+              </div>
+              <Link
+                to="/forgot-password"
+                className="text-sm text-primary hover:underline"
               >
-                Lembrar meu email
-              </Label>
+                Esqueci a senha
+              </Link>
             </div>
-            <Button 
-              type="submit" 
-              className="w-full" 
-              disabled={isSubmitting}
-            >
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
