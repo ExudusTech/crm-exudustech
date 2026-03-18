@@ -17,6 +17,7 @@ import NotFound from "./pages/NotFound";
 import Proposal from "./pages/Proposal";
 import Insights from "./pages/Insights";
 import Settings from "./pages/Settings";
+import Profile from "./pages/Profile";
 
 // CEO pages
 import CeoDashboard from "./pages/ceo/CeoDashboard";
@@ -100,6 +101,7 @@ const App = () => (
               {/* Shared */}
               <Route path="/proposal" element={<WithLayout><Proposal /></WithLayout>} />
               <Route path="/configuracoes" element={<WithLayout><Settings /></WithLayout>} />
+              <Route path="/perfil" element={<WithLayout><Profile /></WithLayout>} />
 
               {/* Home → CEO Dashboard */}
               <Route path="/" element={<Navigate to="/ceo" replace />} />

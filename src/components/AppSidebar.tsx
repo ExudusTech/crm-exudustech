@@ -1,4 +1,5 @@
 import {
+  User,
   LayoutDashboard,
   Radar,
   Rocket,
@@ -78,7 +79,7 @@ export function AppSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
-  const { signOut } = useAuth();
+  const { user, signOut } = useAuth();
   const currentPath = location.pathname;
 
   const isActive = (path: string) => {
@@ -206,6 +207,24 @@ export function AppSidebar() {
 
       <SidebarFooter>
         <SidebarMenu>
+          {/* User Profile Card */}
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              tooltip="Meu Perfil"
+              onClick={() => navigate("/perfil")}
+              className="cursor-pointer"
+            >
+              <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <User className="h-3.5 w-3.5 text-primary" />
+              </div>
+              {!collapsed && (
+                <div className="flex flex-col leading-tight min-w-0">
+                  <span className="text-xs font-medium truncate">{user?.email ?? "Usuário"}</span>
+                  <span className="text-[10px] text-muted-foreground">Ver perfil</span>
+                </div>
+              )}
+            </SidebarMenuButton>
+          </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton
               tooltip={theme === "dark" ? "Modo claro" : "Modo escuro"}
