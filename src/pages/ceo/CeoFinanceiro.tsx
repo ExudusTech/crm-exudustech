@@ -397,6 +397,16 @@ const CeoFinanceiro = () => {
             </div>
           </div>
         </TabsContent>
+
+        {/* === FLUXO DE CAIXA === */}
+        <TabsContent value="cashflow" className="space-y-4">
+          <CashflowSection revenues={revenues} expenses={expenses} subscriptions={subscriptions} bankAccounts={bankAccounts} />
+        </TabsContent>
+
+        {/* === CENTROS DE CUSTO === */}
+        <TabsContent value="costcenters" className="space-y-4">
+          <CostCentersSection />
+        </TabsContent>
       </Tabs>
 
       {/* === DIALOG CRUD === */}
