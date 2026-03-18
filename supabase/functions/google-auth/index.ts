@@ -53,7 +53,6 @@ serve(async (req) => {
 
     // Exchange code for tokens
     if (action === "exchange_code") {
-      const body = await req.json();
       const { code, redirect_uri, user_id } = body;
 
       const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
