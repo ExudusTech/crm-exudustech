@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ceoStatusLabels, statusColors, CeoStatus } from "@/types/ceo";
+import { ceoStatusLabels, statusColors, CeoStatus, organizationTypeLabels, OrganizationType } from "@/types/ceo";
 import { ArrowRight } from "lucide-react";
 
 interface RelatedItem {
@@ -23,7 +23,7 @@ interface RelationConfig {
 }
 
 interface RelatedEntitiesProps {
-  entityType: "organization" | "stakeholder" | "product" | "project";
+  entityType: "organization" | "stakeholder" | "product" | "project" | "initiative";
   entityId: string;
 }
 
@@ -38,13 +38,13 @@ export const RelatedEntities = ({ entityType, entityId }: RelatedEntitiesProps) 
       const result: RelationConfig[] = [];
 
       if (entityType === "organization") {
-        const [iniMain, iniPartner, iniPilot, products, stakeholders, revenues] = await Promise.all([
+        const [iniMain, iniPartner, iniPilot, products, stakeholders, projects] = await Promise.all([
           (supabase as any).from("initiatives").select("id, name, status").eq("organization_id", entityId),
           (supabase as any).from("initiatives").select("id, name, status").eq("partner_organization_id", entityId),
           (supabase as any).from("initiatives").select("id, name, status").eq("pilot_organization_id", entityId),
           (supabase as any).from("products").select("id, name, status").eq("pilot_organization_id", entityId),
           (supabase as any).from("stakeholders").select("id, name, role_title, stakeholder_type").eq("organization_id", entityId),
-          (supabase as any).from("revenues").select("id, description, status, organization_id").eq("organization_id", entityId),
+          (supabase as any).from("projects").select("id, name, status, initiatives!projects_initiative_id_fkey(organization_id, partner_organization_id, pilot_organization_id)"),
         ]);
 
         const allInis = [
@@ -52,10 +52,12 @@ export const RelatedEntities = ({ entityType, entityId }: RelatedEntitiesProps) 
           ...(iniPartner.data || []).map((i: any) => ({ ...i, role: "Parceiro" })),
           ...(iniPilot.data || []).map((i: any) => ({ ...i, role: "Piloto" })),
         ];
-        if (allInis.length > 0) {
+        // Deduplicate
+        const uniqueInis = allInis.filter((v, i, a) => a.findIndex(t => t.id === v.id) === i);
+        if (uniqueInis.length > 0) {
           result.push({
-            title: `Iniciativas (${allInis.length})`,
-            items: allInis.map(i => ({ id: i.id, name: i.name, status: i.status, role: i.role, link: `/ceo/iniciativas/${i.id}` })),
+            title: `Iniciativas (${uniqueInis.length})`,
+            items: uniqueInis.map(i => ({ id: i.id, name: i.name, status: i.status, role: i.role, link: `/ceo/iniciativas/${i.id}` })),
           });
         }
         if (products.data?.length) {
@@ -90,20 +92,42 @@ export const RelatedEntities = ({ entityType, entityId }: RelatedEntitiesProps) 
           });
         }
         if (org.data?.organizations) {
+          const o = org.data.organizations;
           result.push({
             title: "Organização",
-            items: [{ id: org.data.organizations.id, name: org.data.organizations.name, type: org.data.organizations.type, link: "/ceo/organizacoes" }],
+            items: [{ id: o.id, name: o.name, extra: organizationTypeLabels[o.type as OrganizationType] || o.type, link: "/ceo/organizacoes" }],
           });
+        }
+        // Projects via initiatives
+        if (iniLinks.data?.length) {
+          const iniIds = iniLinks.data.map((l: any) => l.initiative_id).filter(Boolean);
+          const { data: projs } = await (supabase as any).from("projects").select("id, name, status").in("initiative_id", iniIds);
+          if (projs?.length) {
+            result.push({
+              title: `Projetos (${projs.length})`,
+              items: projs.map((p: any) => ({ id: p.id, name: p.name, status: p.status, link: "/ceo/projetos" })),
+            });
+          }
         }
       }
 
       if (entityType === "product") {
-        const [inis, projects, modules] = await Promise.all([
-          (supabase as any).from("initiatives").select("id, name, status").or(`organization_id.eq.${entityId},partner_organization_id.eq.${entityId}`),
+        const [projects, modules, inis] = await Promise.all([
           (supabase as any).from("projects").select("id, name, status").eq("product_id", entityId),
           (supabase as any).from("modules").select("id, name").eq("origin_product_id", entityId),
+          (supabase as any).from("projects").select("initiative_id, initiatives(id, name, status)").eq("product_id", entityId),
         ]);
-        // For products, query initiatives via strategic_asset link would be complex; show projects and modules
+        // Initiatives via projects
+        const uniqueInis = (inis.data || [])
+          .filter((p: any) => p.initiatives)
+          .map((p: any) => p.initiatives)
+          .filter((v: any, i: number, a: any[]) => a.findIndex(t => t.id === v.id) === i);
+        if (uniqueInis.length > 0) {
+          result.push({
+            title: `Iniciativas (${uniqueInis.length})`,
+            items: uniqueInis.map((i: any) => ({ id: i.id, name: i.name, status: i.status, link: `/ceo/iniciativas/${i.id}` })),
+          });
+        }
         if (projects.data?.length) {
           result.push({
             title: `Projetos (${projects.data.length})`,
@@ -119,10 +143,9 @@ export const RelatedEntities = ({ entityType, entityId }: RelatedEntitiesProps) 
       }
 
       if (entityType === "project") {
-        const [initiative, tasks, product] = await Promise.all([
+        const [initiative, tasks] = await Promise.all([
           (supabase as any).from("projects").select("initiative_id, initiatives(id, name, status), product_id, products(id, name, status)").eq("id", entityId).single(),
           (supabase as any).from("ceo_tasks").select("id, title, status").eq("project_id", entityId),
-          Promise.resolve(null), // placeholder
         ]);
         if (initiative.data?.initiatives) {
           result.push({
@@ -141,6 +164,86 @@ export const RelatedEntities = ({ entityType, entityId }: RelatedEntitiesProps) 
             title: `Tarefas (${tasks.data.length})`,
             items: tasks.data.map((t: any) => ({ id: t.id, name: t.title, status: t.status, link: "/ceo/tarefas" })),
           });
+        }
+        // Stakeholders via initiative
+        if (initiative.data?.initiative_id) {
+          const { data: stks } = await (supabase as any)
+            .from("initiative_stakeholders")
+            .select("stakeholder_id, role, stakeholders(id, name)")
+            .eq("initiative_id", initiative.data.initiative_id);
+          if (stks?.length) {
+            result.push({
+              title: `Stakeholders (${stks.length})`,
+              items: stks.map((s: any) => ({ id: s.stakeholders?.id, name: s.stakeholders?.name || "—", role: s.role, link: "/ceo/stakeholders" })),
+            });
+          }
+        }
+      }
+
+      if (entityType === "initiative") {
+        const [orgs, stakeholderLinks, projects, asset] = await Promise.all([
+          (supabase as any).from("initiatives").select("organization_id, partner_organization_id, pilot_organization_id, strategic_asset_id").eq("id", entityId).single(),
+          (supabase as any).from("initiative_stakeholders").select("stakeholder_id, role, stakeholders(id, name, role_title)").eq("initiative_id", entityId),
+          (supabase as any).from("projects").select("id, name, status, products(id, name, status)").eq("initiative_id", entityId),
+          Promise.resolve(null),
+        ]);
+
+        // Organizations
+        const orgIds = [orgs.data?.organization_id, orgs.data?.partner_organization_id, orgs.data?.pilot_organization_id].filter(Boolean);
+        if (orgIds.length > 0) {
+          const { data: orgData } = await (supabase as any).from("organizations").select("id, name, type, status").in("id", orgIds);
+          if (orgData?.length) {
+            const items = orgData.map((o: any) => {
+              let role = "";
+              if (o.id === orgs.data.organization_id) role = "Principal";
+              if (o.id === orgs.data.partner_organization_id) role = "Parceiro";
+              if (o.id === orgs.data.pilot_organization_id) role = "Piloto";
+              return { id: o.id, name: o.name, status: o.status, role, link: "/ceo/organizacoes" };
+            });
+            result.push({ title: `Organizações (${items.length})`, items });
+          }
+        }
+
+        // Stakeholders
+        if (stakeholderLinks.data?.length) {
+          result.push({
+            title: `Stakeholders (${stakeholderLinks.data.length})`,
+            items: stakeholderLinks.data.map((s: any) => ({
+              id: s.stakeholders?.id || s.stakeholder_id,
+              name: s.stakeholders?.name || "—",
+              extra: s.stakeholders?.role_title,
+              role: s.role,
+              link: "/ceo/stakeholders",
+            })),
+          });
+        }
+
+        // Projects
+        if (projects.data?.length) {
+          result.push({
+            title: `Projetos (${projects.data.length})`,
+            items: projects.data.map((p: any) => ({ id: p.id, name: p.name, status: p.status, link: "/ceo/projetos" })),
+          });
+          // Products from projects
+          const prods = projects.data.filter((p: any) => p.products).map((p: any) => p.products);
+          const uniqueProds = prods.filter((p: any, i: number, a: any[]) => a.findIndex((x: any) => x.id === p.id) === i);
+          if (uniqueProds.length > 0) {
+            result.push({
+              title: `Produtos (${uniqueProds.length})`,
+              items: uniqueProds.map((p: any) => ({ id: p.id, name: p.name, status: p.status, link: "/ceo/produtos" })),
+            });
+          }
+        }
+
+        // Strategic Asset
+        if (orgs.data?.strategic_asset_id) {
+          const { data: sa } = await (supabase as any).from("strategic_assets").select("id, name, status, asset_type").eq("id", orgs.data.strategic_asset_id).single();
+          if (sa) {
+            result.push({
+              title: "Ativo Estratégico",
+              items: [{ id: sa.id, name: sa.name, status: sa.status, link: "/ceo/radar" }],
+            });
+          }
         }
       }
 
@@ -169,7 +272,7 @@ export const RelatedEntities = ({ entityType, entityId }: RelatedEntitiesProps) 
                   className="flex items-center justify-between p-2 rounded-md hover:bg-muted/50 cursor-pointer transition-colors"
                   onClick={() => item.link && navigate(item.link)}
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-sm font-medium">{item.name}</span>
                     {item.role && <span className="text-xs text-muted-foreground">({item.role})</span>}
                     {item.extra && <span className="text-xs text-muted-foreground">· {item.extra}</span>}
@@ -179,7 +282,7 @@ export const RelatedEntities = ({ entityType, entityId }: RelatedEntitiesProps) 
                       </Badge>
                     )}
                   </div>
-                  <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                  <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />
                 </div>
               ))}
             </div>
