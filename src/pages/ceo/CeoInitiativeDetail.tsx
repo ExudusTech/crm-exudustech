@@ -205,7 +205,7 @@ const CeoInitiativeDetail = () => {
           <TabsTrigger value="documents">Documentos ({documents.length})</TabsTrigger>
           <TabsTrigger value="infra">Infraestrutura ({infra.length})</TabsTrigger>
           <TabsTrigger value="financial">Financeiro</TabsTrigger>
-          <TabsTrigger value="history">Histórico ({history.length + decisions.length + lessons.length})</TabsTrigger>
+          <TabsTrigger value="history">Histórico ({history.length + decisions.length + lessons.length + conversations.length + interpretations.length + initiativeActions.length + initiativeGaps.length})</TabsTrigger>
           <TabsTrigger value="modules">Módulos ({modules.length})</TabsTrigger>
           <TabsTrigger value="export">Exportar</TabsTrigger>
         </TabsList>
