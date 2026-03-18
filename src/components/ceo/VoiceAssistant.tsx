@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Mic, MicOff, X, Send, Bot, User, Loader2, Volume2, VolumeX } from "lucide-react";
+import { Mic, MicOff, X, Send, Bot, User, Loader2, Volume2, VolumeX, Maximize2, Minimize2, GripHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -16,14 +17,35 @@ interface Message {
   createdEntities?: string[];
 }
 
+// Post-processing corrections for common STT mistakes in pt-BR
+const sttCorrections: Record<string, string> = {
+  "senhor": "CEO",
+  "Senhor": "CEO",
+  "senhores": "CEO",
+  "ceo": "CEO",
+  "c e o": "CEO",
+  "c.e.o": "CEO",
+};
+
+function correctTranscript(text: string): string {
+  let corrected = text;
+  for (const [wrong, right] of Object.entries(sttCorrections)) {
+    const regex = new RegExp(`\\b${wrong}\\b`, "gi");
+    corrected = corrected.replace(regex, right);
+  }
+  return corrected;
+}
+
 export function VoiceAssistant() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
+  const [maximized, setMaximized] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
       content:
-        "Olá! Sou o assistente IA do Sistema CEO. Fale ou digite o que precisa:\n\n- 📝 **Cadastrar** iniciativas, organizações, stakeholders, tarefas, projetos\n- 🔗 **Vincular** entidades entre si\n- 📊 **Consultar** radar, agenda, finanças\n\nExemplo: *\"Criar projeto HMK IA com prioridade alta\"*",
+        "Olá! Sou o assistente IA do Sistema CEO. Fale ou digite o que precisa:\n\n- 📝 **Cadastrar** iniciativas, organizações, stakeholders, tarefas, projetos\n- 🔗 **Vincular** entidades entre si\n- 📊 **Consultar** radar, agenda, finanças\n- 📧 **Emails** e 📁 **Drive**\n\nExemplo: *\"Criar projeto HMK IA com prioridade alta\"*",
     },
   ]);
   const [input, setInput] = useState("");
@@ -33,17 +55,63 @@ export function VoiceAssistant() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
 
+  // Drag state
+  const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
+  const [dragging, setDragging] = useState(false);
+  const dragOffset = useRef({ x: 0, y: 0 });
+  const panelRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages]);
 
-  // Cleanup speech recognition on unmount
   useEffect(() => {
     return () => {
       recognitionRef.current?.stop();
       window.speechSynthesis?.cancel();
     };
   }, []);
+
+  // Drag handlers
+  const onDragStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    if (maximized) return;
+    e.preventDefault();
+    const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
+    const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
+    const rect = panelRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    dragOffset.current = { x: clientX - rect.left, y: clientY - rect.top };
+    setDragging(true);
+  }, [maximized]);
+
+  useEffect(() => {
+    if (!dragging) return;
+    const onMove = (e: MouseEvent | TouchEvent) => {
+      const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
+      const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
+      const panelW = panelRef.current?.offsetWidth || 400;
+      const panelH = panelRef.current?.offsetHeight || 500;
+      const x = Math.max(0, Math.min(window.innerWidth - panelW, clientX - dragOffset.current.x));
+      const y = Math.max(0, Math.min(window.innerHeight - panelH, clientY - dragOffset.current.y));
+      setPosition({ x, y });
+    };
+    const onUp = () => setDragging(false);
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    window.addEventListener("touchmove", onMove);
+    window.addEventListener("touchend", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+      window.removeEventListener("touchmove", onMove);
+      window.removeEventListener("touchend", onUp);
+    };
+  }, [dragging]);
+
+  // Reset position when maximized
+  useEffect(() => {
+    if (maximized) setPosition(null);
+  }, [maximized]);
 
   const speak = useCallback(
     (text: string) => {
@@ -78,7 +146,8 @@ export function VoiceAssistant() {
 
     recognition.onresult = (event: any) => {
       const transcript = event.results[0][0].transcript;
-      setInput((prev) => (prev ? prev + " " + transcript : transcript));
+      const corrected = correctTranscript(transcript);
+      setInput((prev) => (prev ? prev + " " + corrected : corrected));
       setListening(false);
     };
 
@@ -106,6 +175,7 @@ export function VoiceAssistant() {
           messages: updatedMessages
             .filter((m) => m.role === "user" || m.role === "assistant")
             .map((m) => ({ role: m.role, content: m.content })),
+          user_id: user?.id,
         },
       });
 
@@ -149,31 +219,55 @@ export function VoiceAssistant() {
     );
   }
 
+  const panelStyle: React.CSSProperties = maximized
+    ? { position: "fixed", inset: 0, width: "100%", height: "100%", borderRadius: 0 }
+    : position
+    ? { position: "fixed", left: position.x, top: position.y, width: "28rem", maxWidth: "calc(100vw - 1rem)" }
+    : { position: "fixed", bottom: "1rem", right: "1rem", width: "28rem", maxWidth: "calc(100vw - 1rem)" };
+
   return (
-    <div className="fixed inset-0 z-[100] flex items-end justify-end p-4 sm:items-center sm:justify-center">
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setOpen(false)} />
+    <div className="fixed inset-0 z-[100] pointer-events-none">
+      {/* Backdrop only when maximized */}
+      {maximized && (
+        <div className="absolute inset-0 bg-black/40 backdrop-blur-sm pointer-events-auto" onClick={() => setMaximized(false)} />
+      )}
 
       {/* Panel */}
-      <div className="relative z-10 w-full max-w-lg h-[80vh] max-h-[700px] bg-background border border-border rounded-xl shadow-2xl flex flex-col overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30">
+      <div
+        ref={panelRef}
+        style={panelStyle}
+        className={`z-10 bg-background border border-border shadow-2xl flex flex-col overflow-hidden pointer-events-auto ${
+          maximized ? "" : "rounded-xl"
+        } ${maximized ? "h-full" : "h-[70vh] max-h-[600px]"}`}
+      >
+        {/* Header - draggable */}
+        <div
+          className={`flex items-center justify-between px-3 py-2 border-b border-border bg-muted/30 select-none ${
+            maximized ? "" : "cursor-grab active:cursor-grabbing"
+          }`}
+          onMouseDown={onDragStart}
+          onTouchStart={onDragStart}
+        >
           <div className="flex items-center gap-2">
-            <div className="h-7 w-7 rounded-full bg-destructive flex items-center justify-center">
-              <Bot className="h-4 w-4 text-destructive-foreground" />
+            {!maximized && <GripHorizontal className="h-3.5 w-3.5 text-muted-foreground" />}
+            <div className="h-6 w-6 rounded-full bg-destructive flex items-center justify-center">
+              <Bot className="h-3.5 w-3.5 text-destructive-foreground" />
             </div>
-            <span className="font-semibold text-sm text-foreground">Assistente CEO</span>
+            <span className="font-semibold text-xs text-foreground">Assistente CEO</span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             {voiceEnabled ? (
-              <Volume2 className="h-3.5 w-3.5 text-primary" />
+              <Volume2 className="h-3 w-3 text-primary" />
             ) : (
-              <VolumeX className="h-3.5 w-3.5 text-muted-foreground" />
+              <VolumeX className="h-3 w-3 text-muted-foreground" />
             )}
-            <Switch checked={voiceEnabled} onCheckedChange={setVoiceEnabled} className="scale-75" />
-            <Label className="text-[10px] text-muted-foreground">TTS</Label>
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setOpen(false)}>
-              <X className="h-4 w-4" />
+            <Switch checked={voiceEnabled} onCheckedChange={setVoiceEnabled} className="scale-[0.65]" />
+            <Label className="text-[9px] text-muted-foreground mr-1">TTS</Label>
+            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setMaximized(!maximized)}>
+              {maximized ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+            </Button>
+            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => { setOpen(false); setMaximized(false); }}>
+              <X className="h-3.5 w-3.5" />
             </Button>
           </div>
         </div>
