@@ -464,6 +464,41 @@ const CeoInitiativeDetail = () => {
             onRefresh={fetchAll}
           />
         </TabsContent>
+
+        {/* MÓDULOS */}
+        <TabsContent value="modules">
+          <Card>
+            <CardHeader><CardTitle className="text-base flex items-center gap-2"><Puzzle className="h-4 w-4" /> Módulos Relacionados</CardTitle></CardHeader>
+            <CardContent>
+              {modules.length === 0 ? <p className="text-sm text-muted-foreground text-center py-4">Nenhum módulo vinculado.</p> : (
+                <div className="space-y-2">
+                  {modules.map(m => (
+                    <div key={m.id} className="border rounded-md p-3">
+                      <p className="font-medium text-sm">{m.modules?.name || "—"}</p>
+                      {m.adaptation_notes && <p className="text-sm text-muted-foreground">{m.adaptation_notes}</p>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* EXPORTAR CONTEXTO */}
+        <TabsContent value="export">
+          <Card>
+            <CardHeader><CardTitle className="text-base flex items-center gap-2"><Download className="h-4 w-4" /> Contexto Exportável</CardTitle></CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-sm text-muted-foreground">Exporte todo o contexto desta iniciativa em diferentes formatos.</p>
+              <div className="flex gap-3">
+                <Button variant="outline" onClick={() => exportContext("json")}><Copy className="h-4 w-4 mr-2" /> JSON</Button>
+                <Button variant="outline" onClick={() => exportContext("markdown")}><FileText className="h-4 w-4 mr-2" /> Markdown</Button>
+                <Button variant="outline" onClick={() => exportContext("txt")}><FileText className="h-4 w-4 mr-2" /> TXT</Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
