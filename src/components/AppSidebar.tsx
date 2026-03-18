@@ -1,4 +1,5 @@
 import {
+  User,
   LayoutDashboard,
   Radar,
   Rocket,
