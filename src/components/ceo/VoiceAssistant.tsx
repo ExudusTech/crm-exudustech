@@ -124,10 +124,23 @@ export function VoiceAssistant() {
   const speak = useCallback((text: string) => {
     if (!voiceEnabled || !("speechSynthesis" in window)) return;
     window.speechSynthesis.cancel();
-    const clean = text.replace(/[#*_`\[\]]/g, "").replace(/\n+/g, ". ");
+    let clean = text;
+    // Remove markdown formatting
+    clean = clean.replace(/#{1,6}\s*/g, "");
+    clean = clean.replace(/\*{1,3}([^*]+)\*{1,3}/g, "$1");
+    clean = clean.replace(/_([^_]+)_/g, "$1");
+    clean = clean.replace(/`([^`]+)`/g, "$1");
+    clean = clean.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1");
+    // Remove emojis
+    clean = clean.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}\u{1F900}-\u{1F9FF}\u{200D}\u{20E3}\u{E0020}-\u{E007F}]/gu, "");
+    // Remove bullet points and list markers
+    clean = clean.replace(/^[-•*]\s*/gm, "");
+    clean = clean.replace(/^\d+\.\s*/gm, "");
+    // Collapse whitespace and newlines
+    clean = clean.replace(/\n+/g, ". ").replace(/\s{2,}/g, " ").replace(/\.\s*\./g, ".").trim();
     const utterance = new SpeechSynthesisUtterance(clean);
     utterance.lang = "pt-BR";
-    utterance.rate = 1.1;
+    utterance.rate = 1.6;
     window.speechSynthesis.speak(utterance);
   }, [voiceEnabled]);
 
