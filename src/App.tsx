@@ -60,6 +60,7 @@ const App = () => (
               <Route path="/ceo" element={<WithLayout><CeoDashboard /></WithLayout>} />
               <Route path="/ceo/radar" element={<WithLayout><CeoRadar /></WithLayout>} />
               <Route path="/ceo/iniciativas" element={<WithLayout><CeoIniciativas /></WithLayout>} />
+              <Route path="/ceo/iniciativas/nova" element={<WithLayout><CeoInitiativeCreate /></WithLayout>} />
               <Route path="/ceo/iniciativas/:id" element={<WithLayout><CeoInitiativeDetail /></WithLayout>} />
               <Route path="/ceo/memoria" element={<WithLayout><CeoDecisionsLessons /></WithLayout>} />
               <Route path="/ceo/projetos" element={<WithLayout><CeoProjetos /></WithLayout>} />
