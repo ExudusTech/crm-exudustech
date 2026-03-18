@@ -79,7 +79,7 @@ export function AppSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
-  const { signOut } = useAuth();
+  const { user, signOut } = useAuth();
   const currentPath = location.pathname;
 
   const isActive = (path: string) => {
