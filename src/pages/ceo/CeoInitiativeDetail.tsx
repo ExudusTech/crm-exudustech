@@ -18,6 +18,7 @@ import {
   ArrowLeft, Edit2, Plus, Trash2, Download, FileText, Copy, CheckSquare,
   Users, Server, DollarSign, Clock, Puzzle, BookOpen, Lightbulb,
 } from "lucide-react";
+import InitiativeTimeline from "@/components/ceo/InitiativeTimeline";
 import {
   CeoStatus, PriorityLevel, ceoStatusLabels, priorityLabels,
   priorityColors, statusColors, taskStatusLabels, taskStatusColors,
