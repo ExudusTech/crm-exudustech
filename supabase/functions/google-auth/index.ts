@@ -19,7 +19,8 @@ serve(async (req) => {
 
   try {
     const url = new URL(req.url);
-    const action = url.searchParams.get("action") || (await req.json().catch(() => ({}))).action;
+    const body = await req.json().catch(() => ({}));
+    const action = url.searchParams.get("action") || body.action;
 
     const CLIENT_ID = Deno.env.get("GOOGLE_CLIENT_ID");
     const CLIENT_SECRET = Deno.env.get("GOOGLE_CLIENT_SECRET");
@@ -35,7 +36,6 @@ serve(async (req) => {
 
     // Generate OAuth URL
     if (action === "get_auth_url") {
-      const body = await req.json().catch(() => ({}));
       const redirectUri = body.redirect_uri;
       const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
         `client_id=${CLIENT_ID}` +
@@ -53,7 +53,6 @@ serve(async (req) => {
 
     // Exchange code for tokens
     if (action === "exchange_code") {
-      const body = await req.json();
       const { code, redirect_uri, user_id } = body;
 
       const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
@@ -127,7 +126,7 @@ serve(async (req) => {
 
     // Refresh token
     if (action === "refresh_token") {
-      const body = await req.json();
+      const { connection_id } = body;
       const { connection_id } = body;
 
       const { data: conn } = await supabase
@@ -176,7 +175,6 @@ serve(async (req) => {
 
     // Get connection status
     if (action === "status") {
-      const body = await req.json();
       const { user_id } = body;
 
       const { data: connections } = await supabase
@@ -192,7 +190,6 @@ serve(async (req) => {
 
     // Disconnect
     if (action === "disconnect") {
-      const body = await req.json();
       const { connection_id } = body;
 
       await supabase.from("google_connections").update({ status: "disconnected" }).eq("id", connection_id);
