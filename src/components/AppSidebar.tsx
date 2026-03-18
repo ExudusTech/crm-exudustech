@@ -105,7 +105,7 @@ export function AppSidebar() {
             className={collapsed ? "h-8 w-8 object-cover" : "w-full h-auto object-cover"}
           />
           {!collapsed && (
-            <span className="text-[10px] tracking-widest uppercase text-muted-foreground pb-2 pt-1">Sistema CEO</span>
+            <span className="text-sm font-semibold tracking-[0.2em] uppercase text-sidebar-foreground/70 pb-3 pt-2">Sistema CEO</span>
           )}
         </div>
       </SidebarHeader>
