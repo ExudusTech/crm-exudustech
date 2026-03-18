@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 interface Message {
   role: "user" | "assistant";
@@ -187,13 +188,13 @@ export function VoiceAssistant() {
                 </div>
               )}
               <div
-                className={`max-w-[80%] rounded-lg px-3 py-2 text-xs ${
-                  msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted text-foreground"
+                className={`max-w-[85%] rounded-lg px-3 py-2 text-xs ${
+                  msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-card border border-border text-foreground shadow-sm"
                 }`}
               >
                 {msg.role === "assistant" ? (
-                  <div className="prose prose-xs dark:prose-invert max-w-none text-xs">
-                    <ReactMarkdown>{msg.content}</ReactMarkdown>
+                  <div className="prose prose-xs dark:prose-invert max-w-none text-xs prose-table:w-full prose-table:text-[10px] prose-th:bg-primary/10 prose-th:px-2 prose-th:py-1 prose-td:px-2 prose-td:py-1 prose-td:border-b prose-td:border-border/50 prose-blockquote:border-l-primary prose-blockquote:bg-primary/5 prose-blockquote:rounded-r-lg prose-blockquote:py-1 prose-blockquote:px-2 prose-h2:text-xs prose-h2:mt-2 prose-h2:mb-1 prose-h3:text-xs prose-h3:mt-2 prose-h3:mb-0.5 prose-code:bg-muted prose-code:px-1 prose-code:rounded prose-code:text-[10px] prose-code:before:content-none prose-code:after:content-none prose-p:my-1 prose-ul:my-0.5 prose-li:my-0">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
                   </div>
                 ) : (
                   <span className="whitespace-pre-wrap">{msg.content}</span>

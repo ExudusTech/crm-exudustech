@@ -9,6 +9,7 @@ import { Bot, Send, User, Loader2, Volume2, VolumeX, Plus, Calendar, DollarSign,
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 interface Message {
   role: "user" | "assistant";
@@ -135,14 +136,14 @@ const CeoIA = () => {
                     <Bot className="h-4 w-4 text-primary-foreground" />
                   </div>
                 )}
-                <div className={`max-w-[75%] rounded-lg px-4 py-3 text-sm ${
+                <div className={`max-w-[85%] rounded-lg px-4 py-3 text-sm ${
                   msg.role === "user"
                     ? "bg-primary text-primary-foreground"
-                    : "bg-muted text-foreground"
+                    : "bg-card border border-border text-foreground shadow-sm"
                 }`}>
                   {msg.role === "assistant" ? (
-                    <div className="prose prose-sm dark:prose-invert max-w-none">
-                      <ReactMarkdown>{msg.content}</ReactMarkdown>
+                    <div className="prose prose-sm dark:prose-invert max-w-none prose-table:w-full prose-table:text-xs prose-th:bg-primary/10 prose-th:px-3 prose-th:py-1.5 prose-th:text-left prose-th:font-semibold prose-td:px-3 prose-td:py-1.5 prose-td:border-b prose-td:border-border/50 prose-table:border prose-table:border-border/50 prose-table:rounded-lg prose-blockquote:border-l-primary prose-blockquote:bg-primary/5 prose-blockquote:rounded-r-lg prose-blockquote:py-2 prose-blockquote:px-4 prose-h2:text-base prose-h2:mt-4 prose-h2:mb-2 prose-h3:text-sm prose-h3:mt-3 prose-h3:mb-1 prose-hr:border-border/50 prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-xs prose-code:before:content-none prose-code:after:content-none prose-p:my-1.5 prose-ul:my-1 prose-li:my-0.5">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
                     </div>
                   ) : (
                     <span className="whitespace-pre-wrap">{msg.content}</span>
