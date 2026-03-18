@@ -28,7 +28,7 @@ import {
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTheme } from "@/components/ThemeProvider";
 import { useAuth } from "@/hooks/useAuth";
-import exudusLogo from "@/assets/exudus-logo.jpeg";
+import exudusLogo from "@/assets/logo-exudus.jpeg";
 import {
   Sidebar,
   SidebarContent,
@@ -94,28 +94,20 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              size="lg"
-              onClick={() => navigate("/ceo")}
-              className="cursor-pointer"
-            >
-              <img
-                src={exudusLogo}
-                alt="ExudusTech"
-                className="h-8 w-8 rounded-md object-cover shrink-0"
-              />
-              {!collapsed && (
-                <div className="flex flex-col gap-0.5 leading-none">
-                  <span className="font-bold text-sm">ExudusTech</span>
-                  <span className="text-xs text-muted-foreground">Sistema CEO</span>
-                </div>
-              )}
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+      <SidebarHeader className="p-0">
+        <div
+          onClick={() => navigate("/ceo")}
+          className="cursor-pointer flex flex-col items-center gap-1 px-2 py-3"
+        >
+          <img
+            src={exudusLogo}
+            alt="ExudusTech"
+            className={collapsed ? "h-8 w-8 rounded-md object-cover" : "w-full max-h-16 object-contain rounded-md"}
+          />
+          {!collapsed && (
+            <span className="text-xs text-muted-foreground">Sistema CEO</span>
+          )}
+        </div>
       </SidebarHeader>
 
       <SidebarContent>
