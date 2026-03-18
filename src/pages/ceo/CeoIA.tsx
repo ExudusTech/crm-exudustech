@@ -21,9 +21,12 @@ interface Message {
 const quickCommands = [
   { icon: Radar, label: "Radar completo", prompt: "Me dê um panorama completo do radar estratégico da ExudusTech agora." },
   { icon: ListTodo, label: "Tarefas atrasadas", prompt: "Quais tarefas estão atrasadas ou bloqueadas?" },
-  { icon: Calendar, label: "Agenda de hoje", prompt: "Como está minha agenda de hoje?" },
+  { icon: Calendar, label: "Agenda da semana", prompt: "Me mostre minha agenda da semana do Google Calendar." },
+  { icon: Mail, label: "Emails importantes", prompt: "Quais emails importantes recebi hoje no Gmail?" },
+  { icon: HardDrive, label: "Arquivos recentes", prompt: "Liste os arquivos mais recentes do meu Google Drive." },
   { icon: DollarSign, label: "Como está o caixa", prompt: "Como está o caixa da empresa?" },
   { icon: Plus, label: "Cadastrar iniciativa", prompt: "Quero cadastrar uma nova iniciativa." },
+  { icon: MessageSquare, label: "Enviar WhatsApp", prompt: "Quero enviar uma mensagem por WhatsApp." },
 ];
 
 const CeoIA = () => {
