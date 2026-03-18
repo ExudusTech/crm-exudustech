@@ -813,34 +813,267 @@ export type Database = {
           },
         ]
       }
+      initiative_actions: {
+        Row: {
+          action_type: string
+          conversation_id: string | null
+          created_at: string
+          description: string
+          id: string
+          initiative_id: string
+          interpretation_id: string | null
+          result_entity_id: string | null
+          result_entity_type: string | null
+          status: string
+        }
+        Insert: {
+          action_type?: string
+          conversation_id?: string | null
+          created_at?: string
+          description: string
+          id?: string
+          initiative_id: string
+          interpretation_id?: string | null
+          result_entity_id?: string | null
+          result_entity_type?: string | null
+          status?: string
+        }
+        Update: {
+          action_type?: string
+          conversation_id?: string | null
+          created_at?: string
+          description?: string
+          id?: string
+          initiative_id?: string
+          interpretation_id?: string | null
+          result_entity_id?: string | null
+          result_entity_type?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "initiative_actions_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "initiative_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "initiative_actions_initiative_id_fkey"
+            columns: ["initiative_id"]
+            isOneToOne: false
+            referencedRelation: "initiatives"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "initiative_actions_interpretation_id_fkey"
+            columns: ["interpretation_id"]
+            isOneToOne: false
+            referencedRelation: "initiative_interpretations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      initiative_conversations: {
+        Row: {
+          author: string | null
+          content: string
+          created_at: string
+          id: string
+          initiative_id: string
+          mentioned_entities: Json | null
+          raw_ai_response: string | null
+          raw_user_message: string | null
+          source: string
+        }
+        Insert: {
+          author?: string | null
+          content: string
+          created_at?: string
+          id?: string
+          initiative_id: string
+          mentioned_entities?: Json | null
+          raw_ai_response?: string | null
+          raw_user_message?: string | null
+          source?: string
+        }
+        Update: {
+          author?: string | null
+          content?: string
+          created_at?: string
+          id?: string
+          initiative_id?: string
+          mentioned_entities?: Json | null
+          raw_ai_response?: string | null
+          raw_user_message?: string | null
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "initiative_conversations_initiative_id_fkey"
+            columns: ["initiative_id"]
+            isOneToOne: false
+            referencedRelation: "initiatives"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      initiative_gaps: {
+        Row: {
+          conversation_id: string | null
+          created_at: string
+          description: string
+          id: string
+          initiative_id: string
+          resolved: boolean
+          resolved_action_id: string | null
+          resolved_at: string | null
+          severity: string
+        }
+        Insert: {
+          conversation_id?: string | null
+          created_at?: string
+          description: string
+          id?: string
+          initiative_id: string
+          resolved?: boolean
+          resolved_action_id?: string | null
+          resolved_at?: string | null
+          severity?: string
+        }
+        Update: {
+          conversation_id?: string | null
+          created_at?: string
+          description?: string
+          id?: string
+          initiative_id?: string
+          resolved?: boolean
+          resolved_action_id?: string | null
+          resolved_at?: string | null
+          severity?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "initiative_gaps_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "initiative_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "initiative_gaps_initiative_id_fkey"
+            columns: ["initiative_id"]
+            isOneToOne: false
+            referencedRelation: "initiatives"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "initiative_gaps_resolved_action_id_fkey"
+            columns: ["resolved_action_id"]
+            isOneToOne: false
+            referencedRelation: "initiative_actions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       initiative_history: {
         Row: {
+          author: string | null
           content: string
+          conversation_id: string | null
           created_at: string
           entry_type: string
           id: string
           initiative_id: string
+          source: string | null
           title: string | null
         }
         Insert: {
+          author?: string | null
           content: string
+          conversation_id?: string | null
           created_at?: string
           entry_type?: string
           id?: string
           initiative_id: string
+          source?: string | null
           title?: string | null
         }
         Update: {
+          author?: string | null
           content?: string
+          conversation_id?: string | null
           created_at?: string
           entry_type?: string
           id?: string
           initiative_id?: string
+          source?: string | null
           title?: string | null
         }
         Relationships: [
           {
+            foreignKeyName: "initiative_history_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "initiative_conversations"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "initiative_history_initiative_id_fkey"
+            columns: ["initiative_id"]
+            isOneToOne: false
+            referencedRelation: "initiatives"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      initiative_interpretations: {
+        Row: {
+          confidence: number | null
+          conversation_id: string | null
+          created_at: string
+          detected_entities: Json | null
+          detected_intent: string | null
+          detected_themes: Json | null
+          id: string
+          initiative_id: string
+          notes: string | null
+          suggested_actions: Json | null
+        }
+        Insert: {
+          confidence?: number | null
+          conversation_id?: string | null
+          created_at?: string
+          detected_entities?: Json | null
+          detected_intent?: string | null
+          detected_themes?: Json | null
+          id?: string
+          initiative_id: string
+          notes?: string | null
+          suggested_actions?: Json | null
+        }
+        Update: {
+          confidence?: number | null
+          conversation_id?: string | null
+          created_at?: string
+          detected_entities?: Json | null
+          detected_intent?: string | null
+          detected_themes?: Json | null
+          id?: string
+          initiative_id?: string
+          notes?: string | null
+          suggested_actions?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "initiative_interpretations_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "initiative_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "initiative_interpretations_initiative_id_fkey"
             columns: ["initiative_id"]
             isOneToOne: false
             referencedRelation: "initiatives"

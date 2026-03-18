@@ -34,7 +34,7 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Fetch context
-    const [initiatives, tasks, orgs, stakeholders, products, projects, events] = await Promise.all([
+    const [initiatives, tasks, orgs, stakeholders, products, projects, events, recentHistory] = await Promise.all([
       supabase.from("initiatives").select("id, name, status, priority, next_action, main_risk, deadline").eq("status", "ativo").limit(15),
       supabase.from("ceo_tasks").select("id, title, status, priority, deadline, responsible").in("status", ["todo", "doing", "bloqueado"]).limit(20),
       supabase.from("organizations").select("id, name, type, status").eq("status", "ativo").limit(15),
@@ -42,6 +42,7 @@ serve(async (req) => {
       supabase.from("products").select("id, name, status, category").limit(10),
       supabase.from("projects").select("id, name, status, initiative_id, responsible").limit(10),
       supabase.from("ceo_events").select("id, title, event_date, description").gte("event_date", new Date().toISOString()).order("event_date").limit(5),
+      supabase.from("initiative_history").select("id, initiative_id, entry_type, title, content, source, author, created_at").order("created_at", { ascending: false }).limit(15),
     ]);
 
     const contextStr = JSON.stringify({
@@ -52,6 +53,7 @@ serve(async (req) => {
       products: products.data || [],
       projects: projects.data || [],
       upcoming_events: events.data || [],
+      recent_history: recentHistory.data || [],
     });
 
     const systemPrompt = `Você é o Assistente Executivo IA do Sistema CEO da ExudusTech.
@@ -73,6 +75,16 @@ IMPORTANTE - FLUXO DE CONFIRMAÇÃO:
 - Pergunte "Confirma o cadastro?" 
 - SÓ execute as tool calls DEPOIS que o usuário confirmar (ex: "sim", "confirma", "ok", "pode criar")
 - Se o usuário não confirmar, pergunte o que deseja ajustar
+
+MEMÓRIA VIVA DAS INICIATIVAS:
+- O sistema possui um histórico expandido por iniciativa com: atualizações, conversas, interpretações da IA, ações geradas, decisões, lições aprendidas e lacunas detectadas.
+- Ao processar uma conversa sobre uma iniciativa, você deve:
+  1. Registrar a conversa em initiative_conversations (com raw_user_message e raw_ai_response)
+  2. Gerar uma interpretação em initiative_interpretations (entidades, intenção, temas, ações sugeridas, confiança)
+  3. Se criar tarefas, decisões ou atualizar status, registrar em initiative_actions
+  4. Se detectar algo mencionado que NÃO virou ação, registrar em initiative_gaps
+- Use o recent_history do contexto para responder com base no que já foi registrado.
+- Sempre que responder sobre uma iniciativa, considere o histórico completo dela.
 
 CONTEXTO ATUAL DO SISTEMA:
 ${contextStr}

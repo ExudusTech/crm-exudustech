@@ -11,13 +11,12 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   ArrowLeft, Edit2, Plus, Trash2, Download, FileText, Copy, CheckSquare,
   Users, Server, DollarSign, Clock, Puzzle, BookOpen, Lightbulb,
 } from "lucide-react";
+import InitiativeTimeline from "@/components/ceo/InitiativeTimeline";
 import {
   CeoStatus, PriorityLevel, ceoStatusLabels, priorityLabels,
   priorityColors, statusColors, taskStatusLabels, taskStatusColors,
@@ -42,6 +41,10 @@ const CeoInitiativeDetail = () => {
   const [decisions, setDecisions] = useState<any[]>([]);
   const [lessons, setLessons] = useState<any[]>([]);
   const [modules, setModules] = useState<any[]>([]);
+  const [conversations, setConversations] = useState<any[]>([]);
+  const [interpretations, setInterpretations] = useState<any[]>([]);
+  const [initiativeActions, setInitiativeActions] = useState<any[]>([]);
+  const [initiativeGaps, setInitiativeGaps] = useState<any[]>([]);
   const [relatedOrgs, setRelatedOrgs] = useState<{ main?: any; partner?: any; pilot?: any }>({});
   const [relatedProjects, setRelatedProjects] = useState<any[]>([]);
   const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
@@ -49,14 +52,10 @@ const CeoInitiativeDetail = () => {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState<any>({});
 
-  // History entry dialog
-  const [historyDialog, setHistoryDialog] = useState(false);
-  const [historyForm, setHistoryForm] = useState({ title: "", content: "", entry_type: "atualizacao" });
-
   const fetchAll = useCallback(async () => {
     if (!id) return;
     setLoading(true);
-    const [ini, t, sh, doc, inf, rev, exp, hist, dec, les, mod, projects] = await Promise.all([
+    const [ini, t, sh, doc, inf, rev, exp, hist, dec, les, mod, projects, convs, interps, acts, gps] = await Promise.all([
       (supabase as any).from("initiatives").select("*").eq("id", id).single(),
       (supabase as any).from("ceo_tasks").select("*").eq("initiative_id", id).order("created_at", { ascending: false }),
       (supabase as any).from("initiative_stakeholders").select("*, stakeholders(*)").eq("initiative_id", id),
@@ -69,6 +68,10 @@ const CeoInitiativeDetail = () => {
       (supabase as any).from("lessons_learned").select("*").eq("initiative_id", id).order("created_at", { ascending: false }),
       (supabase as any).from("module_usages").select("*, modules(*)").eq("used_in_initiative_id", id),
       (supabase as any).from("projects").select("*, products(id, name, status)").eq("initiative_id", id),
+      (supabase as any).from("initiative_conversations").select("*").eq("initiative_id", id).order("created_at", { ascending: false }),
+      (supabase as any).from("initiative_interpretations").select("*").eq("initiative_id", id).order("created_at", { ascending: false }),
+      (supabase as any).from("initiative_actions").select("*").eq("initiative_id", id).order("created_at", { ascending: false }),
+      (supabase as any).from("initiative_gaps").select("*").eq("initiative_id", id).order("created_at", { ascending: false }),
     ]);
     if (ini.data) {
       setInitiative(ini.data);
@@ -106,6 +109,10 @@ const CeoInitiativeDetail = () => {
     setDecisions(dec.data || []);
     setLessons(les.data || []);
     setModules(mod.data || []);
+    setConversations(convs.data || []);
+    setInterpretations(interps.data || []);
+    setInitiativeActions(acts.data || []);
+    setInitiativeGaps(gps.data || []);
     setRelatedProjects(projects.data || []);
     // Collect unique products from projects
     const prods = (projects.data || []).filter((p: any) => p.products).map((p: any) => p.products);
@@ -125,18 +132,8 @@ const CeoInitiativeDetail = () => {
     fetchAll();
   };
 
-  const addHistoryEntry = async () => {
-    if (!historyForm.content.trim()) return;
-    const { error } = await (supabase as any).from("initiative_history").insert({
-      initiative_id: id,
-      ...historyForm,
-    });
-    if (error) { toast({ title: "Erro", description: error.message, variant: "destructive" }); return; }
-    toast({ title: "Registrado" });
-    setHistoryDialog(false);
-    setHistoryForm({ title: "", content: "", entry_type: "atualizacao" });
-    fetchAll();
-  };
+
+
 
   const exportContext = (format: "json" | "markdown" | "txt") => {
     const ctx = {
@@ -206,7 +203,7 @@ const CeoInitiativeDetail = () => {
           <TabsTrigger value="documents">Documentos ({documents.length})</TabsTrigger>
           <TabsTrigger value="infra">Infraestrutura ({infra.length})</TabsTrigger>
           <TabsTrigger value="financial">Financeiro</TabsTrigger>
-          <TabsTrigger value="history">Histórico ({history.length + decisions.length + lessons.length})</TabsTrigger>
+          <TabsTrigger value="history">Histórico ({history.length + decisions.length + lessons.length + conversations.length + interpretations.length + initiativeActions.length + initiativeGaps.length})</TabsTrigger>
           <TabsTrigger value="modules">Módulos ({modules.length})</TabsTrigger>
           <TabsTrigger value="export">Exportar</TabsTrigger>
         </TabsList>
@@ -451,69 +448,19 @@ const CeoInitiativeDetail = () => {
           </div>
         </TabsContent>
 
-        {/* HISTÓRICO + DECISÕES + LIÇÕES */}
-        <TabsContent value="history" className="space-y-4">
-          <div className="flex justify-end gap-2">
-            <Button size="sm" variant="outline" onClick={() => setHistoryDialog(true)}><Plus className="h-4 w-4 mr-1" /> Registrar Atualização</Button>
-          </div>
-
-          {/* Timeline */}
-          <Card>
-            <CardHeader><CardTitle className="text-base flex items-center gap-2"><Clock className="h-4 w-4" /> Atualizações</CardTitle></CardHeader>
-            <CardContent>
-              {history.length === 0 ? <p className="text-sm text-muted-foreground text-center py-4">Nenhuma atualização.</p> : (
-                <div className="space-y-3">
-                  {history.map(h => (
-                    <div key={h.id} className="border-l-2 border-primary pl-4 py-1">
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="text-xs">{h.entry_type}</Badge>
-                        <span className="text-xs text-muted-foreground">{new Date(h.created_at).toLocaleString("pt-BR")}</span>
-                      </div>
-                      {h.title && <p className="font-medium text-sm">{h.title}</p>}
-                      <p className="text-sm text-muted-foreground">{h.content}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Decisions */}
-          <Card>
-            <CardHeader><CardTitle className="text-base flex items-center gap-2"><Lightbulb className="h-4 w-4" /> Decisões</CardTitle></CardHeader>
-            <CardContent>
-              {decisions.length === 0 ? <p className="text-sm text-muted-foreground text-center py-4">Nenhuma decisão registrada.</p> : (
-                <div className="space-y-2">
-                  {decisions.map(d => (
-                    <div key={d.id} className="border rounded-md p-3">
-                      <p className="font-medium text-sm">{d.title}</p>
-                      {d.description && <p className="text-sm text-muted-foreground">{d.description}</p>}
-                      {d.impact && <p className="text-xs mt-1"><span className="font-medium">Impacto:</span> {d.impact}</p>}
-                      <p className="text-xs text-muted-foreground mt-1">{new Date(d.decided_at).toLocaleDateString("pt-BR")} · {d.decided_by || "—"}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Lessons */}
-          <Card>
-            <CardHeader><CardTitle className="text-base flex items-center gap-2"><BookOpen className="h-4 w-4" /> Lições Aprendidas</CardTitle></CardHeader>
-            <CardContent>
-              {lessons.length === 0 ? <p className="text-sm text-muted-foreground text-center py-4">Nenhuma lição registrada.</p> : (
-                <div className="space-y-2">
-                  {lessons.map(l => (
-                    <div key={l.id} className="border rounded-md p-3">
-                      <p className="font-medium text-sm">{l.title}</p>
-                      {l.description && <p className="text-sm text-muted-foreground">{l.description}</p>}
-                      {l.category && <Badge variant="outline" className="text-xs mt-1">{l.category}</Badge>}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+        {/* HISTÓRICO — TIMELINE UNIFICADA */}
+        <TabsContent value="history">
+          <InitiativeTimeline
+            initiativeId={id!}
+            history={history}
+            decisions={decisions}
+            lessons={lessons}
+            conversations={conversations}
+            interpretations={interpretations}
+            actions={initiativeActions}
+            gaps={initiativeGaps}
+            onRefresh={fetchAll}
+          />
         </TabsContent>
 
         {/* MÓDULOS */}
@@ -550,32 +497,6 @@ const CeoInitiativeDetail = () => {
           </Card>
         </TabsContent>
       </Tabs>
-
-      {/* History Entry Dialog */}
-      <Dialog open={historyDialog} onOpenChange={setHistoryDialog}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Registrar Atualização</DialogTitle></DialogHeader>
-          <div className="space-y-3">
-            <div><Label>Tipo</Label>
-              <Select value={historyForm.entry_type} onValueChange={v => setHistoryForm({ ...historyForm, entry_type: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="atualizacao">Atualização</SelectItem>
-                  <SelectItem value="reuniao">Reunião</SelectItem>
-                  <SelectItem value="decisao">Decisão</SelectItem>
-                  <SelectItem value="marco">Marco</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div><Label>Título (opcional)</Label><Input value={historyForm.title} onChange={e => setHistoryForm({ ...historyForm, title: e.target.value })} /></div>
-            <div><Label>Conteúdo *</Label><Textarea value={historyForm.content} onChange={e => setHistoryForm({ ...historyForm, content: e.target.value })} rows={4} /></div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setHistoryDialog(false)}>Cancelar</Button>
-            <Button onClick={addHistoryEntry} disabled={!historyForm.content.trim()}>Salvar</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
