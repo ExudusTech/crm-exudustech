@@ -312,39 +312,55 @@ const CeoUsers = () => {
       <Dialog open={permissionsOpen} onOpenChange={setPermissionsOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Permissões — {selectedUser?.full_name}</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              Permissões — {selectedUser?.full_name}
+              {selectedUser?.roles.includes("admin") && (
+                <Badge variant="default" className="ml-2">Admin — Acesso Total</Badge>
+              )}
+            </DialogTitle>
           </DialogHeader>
+          {selectedUser?.roles.includes("admin") && (
+            <p className="text-sm text-muted-foreground">Administradores possuem acesso total a todos os módulos. Estas permissões não podem ser alteradas.</p>
+          )}
           <div className="space-y-3 max-h-[60vh] overflow-y-auto">
-            {MODULES.map(mod => (
-              <div key={mod.key} className="flex items-center justify-between py-2 border-b border-border last:border-0">
-                <span className="text-sm font-medium">{mod.label}</span>
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-1.5">
-                    <Switch
-                      checked={permissions[mod.key]?.can_read ?? true}
-                      onCheckedChange={v => setPermissions(p => ({ ...p, [mod.key]: { ...p[mod.key], can_read: v } }))}
-                    />
-                    <span className="text-xs text-muted-foreground">Ler</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Switch
-                      checked={permissions[mod.key]?.can_write ?? false}
-                      onCheckedChange={v => setPermissions(p => ({ ...p, [mod.key]: { ...p[mod.key], can_write: v } }))}
-                    />
-                    <span className="text-xs text-muted-foreground">Editar</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Switch
-                      checked={permissions[mod.key]?.can_delete ?? false}
-                      onCheckedChange={v => setPermissions(p => ({ ...p, [mod.key]: { ...p[mod.key], can_delete: v } }))}
-                    />
-                    <span className="text-xs text-muted-foreground">Excluir</span>
+            {MODULES.map(mod => {
+              const isAdminUser = selectedUser?.roles.includes("admin");
+              return (
+                <div key={mod.key} className="flex items-center justify-between py-2 border-b border-border last:border-0">
+                  <span className="text-sm font-medium">{mod.label}</span>
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-1.5">
+                      <Switch
+                        checked={permissions[mod.key]?.can_read ?? true}
+                        onCheckedChange={v => setPermissions(p => ({ ...p, [mod.key]: { ...p[mod.key], can_read: v } }))}
+                        disabled={isAdminUser}
+                      />
+                      <span className="text-xs text-muted-foreground">Ler</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Switch
+                        checked={permissions[mod.key]?.can_write ?? false}
+                        onCheckedChange={v => setPermissions(p => ({ ...p, [mod.key]: { ...p[mod.key], can_write: v } }))}
+                        disabled={isAdminUser}
+                      />
+                      <span className="text-xs text-muted-foreground">Editar</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Switch
+                        checked={permissions[mod.key]?.can_delete ?? false}
+                        onCheckedChange={v => setPermissions(p => ({ ...p, [mod.key]: { ...p[mod.key], can_delete: v } }))}
+                        disabled={isAdminUser}
+                      />
+                      <span className="text-xs text-muted-foreground">Excluir</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
-          <Button onClick={savePermissions} className="w-full mt-2">Salvar Permissões</Button>
+          {!selectedUser?.roles.includes("admin") && (
+            <Button onClick={savePermissions} className="w-full mt-2">Salvar Permissões</Button>
+          )}
         </DialogContent>
       </Dialog>
     </div>
