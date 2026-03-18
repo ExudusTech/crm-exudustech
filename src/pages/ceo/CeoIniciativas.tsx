@@ -112,7 +112,7 @@ const CeoIniciativas = () => {
             {filtered.length === 0 ? (
               <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Nenhuma iniciativa encontrada.</TableCell></TableRow>
             ) : filtered.map(item => (
-              <TableRow key={item.id} className="cursor-pointer hover:bg-accent/50" onClick={() => openEdit(item)}>
+              <TableRow key={item.id} className="cursor-pointer hover:bg-accent/50" onClick={() => navigate(`/ceo/iniciativas/${item.id}`)}>
                 <TableCell>
                   <p className="font-medium">{item.name}</p>
                   {item.short_name && <p className="text-xs text-muted-foreground">{item.short_name}</p>}
