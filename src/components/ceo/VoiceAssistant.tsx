@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { Mic, MicOff, X, Send, Bot, User, Loader2, Volume2, VolumeX, Maximize2, Minimize2, GripHorizontal } from "lucide-react";
+import { Mic, MicOff, X, Send, Bot, User, Loader2, Volume2, VolumeX, Maximize2, Minimize2, GripHorizontal, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -121,26 +121,32 @@ export function VoiceAssistant() {
     if (maximized) setPosition({ x: 0, y: 0 });
   }, [maximized]);
 
+  const [isSpeaking, setIsSpeaking] = useState(false);
+
+  const stopSpeaking = useCallback(() => {
+    window.speechSynthesis?.cancel();
+    setIsSpeaking(false);
+  }, []);
+
   const speak = useCallback((text: string) => {
     if (!voiceEnabled || !("speechSynthesis" in window)) return;
     window.speechSynthesis.cancel();
     let clean = text;
-    // Remove markdown formatting
     clean = clean.replace(/#{1,6}\s*/g, "");
     clean = clean.replace(/\*{1,3}([^*]+)\*{1,3}/g, "$1");
     clean = clean.replace(/_([^_]+)_/g, "$1");
     clean = clean.replace(/`([^`]+)`/g, "$1");
     clean = clean.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1");
-    // Remove emojis
     clean = clean.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}\u{1F900}-\u{1F9FF}\u{200D}\u{20E3}\u{E0020}-\u{E007F}]/gu, "");
-    // Remove bullet points and list markers
     clean = clean.replace(/^[-•*]\s*/gm, "");
     clean = clean.replace(/^\d+\.\s*/gm, "");
-    // Collapse whitespace and newlines
     clean = clean.replace(/\n+/g, ". ").replace(/\s{2,}/g, " ").replace(/\.\s*\./g, ".").trim();
     const utterance = new SpeechSynthesisUtterance(clean);
     utterance.lang = "pt-BR";
     utterance.rate = 1.6;
+    utterance.onstart = () => setIsSpeaking(true);
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => setIsSpeaking(false);
     window.speechSynthesis.speak(utterance);
   }, [voiceEnabled]);
 
@@ -246,6 +252,11 @@ export function VoiceAssistant() {
             <span className="font-semibold text-xs text-foreground">Assistente CEO</span>
           </div>
           <div className="flex items-center gap-1.5">
+            {isSpeaking && (
+              <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive" onClick={stopSpeaking} title="Parar áudio">
+                <Square className="h-3 w-3 fill-current" />
+              </Button>
+            )}
             {voiceEnabled ? <Volume2 className="h-3 w-3 text-primary" /> : <VolumeX className="h-3 w-3 text-muted-foreground" />}
             <Switch checked={voiceEnabled} onCheckedChange={setVoiceEnabled} className="scale-[0.65]" />
             <Label className="text-[9px] text-muted-foreground mr-1">TTS</Label>

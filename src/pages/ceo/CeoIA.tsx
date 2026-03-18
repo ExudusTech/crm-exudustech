@@ -5,7 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { Bot, Send, User, Loader2, Volume2, VolumeX, Plus, Calendar, DollarSign, ListTodo, Radar, Mail, HardDrive, MessageSquare } from "lucide-react";
+import { Bot, Send, User, Loader2, Volume2, VolumeX, Plus, Calendar, DollarSign, ListTodo, Radar, Mail, HardDrive, MessageSquare, Square } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -38,19 +38,37 @@ const CeoIA = () => {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages]);
 
+  const stopSpeaking = () => {
+    window.speechSynthesis?.cancel();
+    setIsSpeaking(false);
+  };
+
   const speak = (text: string) => {
     if (!voiceEnabled || !("speechSynthesis" in window)) return;
     window.speechSynthesis.cancel();
-    const clean = text.replace(/[#*_`\[\]]/g, "").replace(/\n+/g, ". ");
+    let clean = text;
+    clean = clean.replace(/#{1,6}\s*/g, "");
+    clean = clean.replace(/\*{1,3}([^*]+)\*{1,3}/g, "$1");
+    clean = clean.replace(/_([^_]+)_/g, "$1");
+    clean = clean.replace(/`([^`]+)`/g, "$1");
+    clean = clean.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1");
+    clean = clean.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}\u{1F900}-\u{1F9FF}\u{200D}\u{20E3}\u{E0020}-\u{E007F}]/gu, "");
+    clean = clean.replace(/^[-•*]\s*/gm, "");
+    clean = clean.replace(/^\d+\.\s*/gm, "");
+    clean = clean.replace(/\n+/g, ". ").replace(/\s{2,}/g, " ").replace(/\.\s*\./g, ".").trim();
     const utterance = new SpeechSynthesisUtterance(clean);
     utterance.lang = "pt-BR";
-    utterance.rate = 1.1;
+    utterance.rate = 1.6;
+    utterance.onstart = () => setIsSpeaking(true);
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => setIsSpeaking(false);
     window.speechSynthesis.speak(utterance);
   };
 
@@ -109,6 +127,11 @@ const CeoIA = () => {
           <p className="text-muted-foreground text-sm">Cadastro assistido, consultas e análises estratégicas</p>
         </div>
         <div className="flex items-center gap-2">
+          {isSpeaking && (
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={stopSpeaking} title="Parar áudio">
+              <Square className="h-4 w-4 fill-current" />
+            </Button>
+          )}
           {voiceEnabled ? <Volume2 className="h-4 w-4 text-primary" /> : <VolumeX className="h-4 w-4 text-muted-foreground" />}
           <Switch checked={voiceEnabled} onCheckedChange={setVoiceEnabled} />
           <Label className="text-xs text-muted-foreground">Voz</Label>
