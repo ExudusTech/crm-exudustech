@@ -141,12 +141,14 @@ const CeoFinanceiro = () => {
       </div>
 
       <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList>
+        <TabsList className="flex-wrap h-auto gap-1">
           <TabsTrigger value="overview">Visão Geral</TabsTrigger>
           <TabsTrigger value="revenues">Receitas</TabsTrigger>
           <TabsTrigger value="expenses">Despesas</TabsTrigger>
           <TabsTrigger value="subscriptions">Assinaturas</TabsTrigger>
           <TabsTrigger value="accounts">Contas / Cartões</TabsTrigger>
+          <TabsTrigger value="cashflow">Fluxo de Caixa</TabsTrigger>
+          <TabsTrigger value="costcenters">Centros de Custo</TabsTrigger>
         </TabsList>
 
         {/* === VISÃO GERAL === */}
