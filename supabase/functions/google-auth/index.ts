@@ -175,7 +175,6 @@ serve(async (req) => {
 
     // Get connection status
     if (action === "status") {
-      const body = await req.json();
       const { user_id } = body;
 
       const { data: connections } = await supabase
