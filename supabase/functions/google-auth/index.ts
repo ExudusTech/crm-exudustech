@@ -126,7 +126,7 @@ serve(async (req) => {
 
     // Refresh token
     if (action === "refresh_token") {
-      const body = await req.json();
+      const { connection_id } = body;
       const { connection_id } = body;
 
       const { data: conn } = await supabase
