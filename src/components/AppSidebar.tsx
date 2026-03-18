@@ -28,7 +28,7 @@ import {
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTheme } from "@/components/ThemeProvider";
 import { useAuth } from "@/hooks/useAuth";
-import exudusLogo from "@/assets/exudus-logo.jpeg";
+import exudusLogo from "@/assets/logo-exudus.jpeg";
 import {
   Sidebar,
   SidebarContent,
