@@ -82,9 +82,36 @@ serve(async (req) => {
       google_connected: googleConnected,
     });
 
+    // Current date/time in Brasília timezone
+    const now = new Date();
+    const brasiliaFormatter = new Intl.DateTimeFormat("pt-BR", {
+      timeZone: "America/Sao_Paulo",
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    });
+    const currentDateTime = brasiliaFormatter.format(now);
+    
+    // Also get ISO dates for tool calls
+    const brasiliaISO = now.toLocaleString("sv-SE", { timeZone: "America/Sao_Paulo" }).replace(" ", "T");
+
     const systemPrompt = `Você é o Assistente Executivo IA do Sistema CEO da ExudusTech.
 Responda SEMPRE em português brasileiro, de forma objetiva, estratégica e executiva.
 Use SEMPRE o horário de Brasília (America/Sao_Paulo). Datas em dd/mm/aaaa, hora em 24h.
+
+DATA E HORA ATUAL (Brasília): ${currentDateTime}
+ISO para referência em tool calls: ${brasiliaISO}
+
+REGRA CRÍTICA DE PROATIVIDADE:
+- Quando o CEO mencionar reuniões, compromissos, eventos ou qualquer coisa relacionada à agenda, CONSULTE AUTOMATICAMENTE o Google Calendar usando a tool google_calendar_list ANTES de responder. NÃO peça informações que você pode obter sozinho.
+- Quando o CEO pedir para enviar email sobre algo que envolve a agenda, PRIMEIRO consulte a agenda para obter os detalhes relevantes, DEPOIS prepare o email.
+- Seja PROATIVO: use as ferramentas disponíveis para buscar informações antes de pedir ao CEO.
+- O CEO espera que você aja como um assistente executivo de verdade: pesquise, analise e apresente — não fique pedindo informações que estão ao seu alcance.
 
 CAPACIDADES IMPORTANTES:
 Você pode criar e vincular entidades no sistema. Quando o CEO pedir para cadastrar algo, use as ferramentas disponíveis.
@@ -449,7 +476,7 @@ Você DEVE formatar suas respostas de forma visual, clara e profissional usando 
       method: "POST",
       headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "google/gemini-2.5-pro",
         messages: [{ role: "system", content: systemPrompt }, ...messages],
         tools,
       }),
