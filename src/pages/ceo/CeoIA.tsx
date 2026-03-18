@@ -70,6 +70,7 @@ const CeoIA = () => {
           messages: updatedMessages
             .filter(m => m.role === "user" || m.role === "assistant")
             .map(m => ({ role: m.role, content: m.content })),
+          user_id: user?.id,
         },
       });
 
