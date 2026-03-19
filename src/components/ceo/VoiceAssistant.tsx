@@ -538,13 +538,13 @@ export function VoiceAssistant() {
         </div>
 
         <div className="border-t border-border p-3 flex gap-2 items-end">
-          <Button
-            type="button"
-            variant={isMicActive ? "destructive" : "outline"}
-            size="icon"
-            className={`shrink-0 h-9 w-9 ${isMicActive ? "animate-pulse" : ""}`}
-            onClick={() => void toggleListening()}
-            disabled={loading}
+            <Button
+              type="button"
+              variant={isMicActive ? "destructive" : "outline"}
+              size="icon"
+              className={`shrink-0 h-9 w-9 ${isMicActive ? "animate-pulse" : ""}`}
+              onClick={handleMicClick}
+              disabled={loading}
             aria-label={isMicActive ? "Parar gravação" : "Iniciar gravação"}
           >
             {isMicActive ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
