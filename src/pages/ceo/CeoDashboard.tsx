@@ -259,7 +259,7 @@ const CeoDashboard = () => {
       <Card>
         <CardHeader><CardTitle className="text-base">Atalhos Rápidos</CardTitle></CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
             {[
               { icon: CheckSquare, label: "Criar Tarefa", path: "/ceo/tarefas" },
               { icon: Radar, label: "Ver Radar", path: "/ceo/radar" },

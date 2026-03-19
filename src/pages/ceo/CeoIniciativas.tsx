@@ -71,7 +71,7 @@ const CeoIniciativas = () => {
         </Select>
       </div>
 
-      <Card>
+      <Card className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
