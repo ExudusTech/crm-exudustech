@@ -85,16 +85,16 @@ const CeoFiscal = () => {
     setDialogOpen(false);
   };
 
-  if (loading) return <div className="p-6 max-w-7xl mx-auto"><Skeleton className="h-8 w-48 mb-4" /><Skeleton className="h-[300px] w-full" /></div>;
+  if (loading) return <div className="p-4 md:p-6 max-w-7xl mx-auto"><Skeleton className="h-8 w-48 mb-4" /><Skeleton className="h-[300px] w-full" /></div>;
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-4 md:p-6 max-w-7xl mx-auto">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2"><FileText className="h-6 w-6" /> Fiscal</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground flex items-center gap-2"><FileText className="h-5 w-5 sm:h-6 sm:w-6" /> Fiscal</h1>
           <p className="text-muted-foreground text-sm">Gestão fiscal e contábil.</p>
         </div>
-        <Button onClick={openCreate}><Plus className="h-4 w-4 mr-2" /> Nova Obrigação</Button>
+        <Button onClick={openCreate} className="w-full sm:w-auto"><Plus className="h-4 w-4 mr-2" /> Nova Obrigação</Button>
       </div>
 
       {/* KPIs */}

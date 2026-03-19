@@ -53,20 +53,20 @@ const CeoProdutos = () => {
 
   const selectedProd = data.find(p => p.id === detailId);
 
-  if (loading) return <div className="p-6 max-w-7xl mx-auto"><Skeleton className="h-8 w-48 mb-4" /><Skeleton className="h-[300px] w-full" /></div>;
+  if (loading) return <div className="p-4 md:p-6 max-w-7xl mx-auto"><Skeleton className="h-8 w-48 mb-4" /><Skeleton className="h-[300px] w-full" /></div>;
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-4 md:p-6 max-w-7xl mx-auto">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2"><Package className="h-6 w-6" /> Produtos</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground flex items-center gap-2"><Package className="h-5 w-5 sm:h-6 sm:w-6" /> Produtos</h1>
           <p className="text-muted-foreground text-sm">Ativos replicáveis, comercializáveis ou escaláveis.</p>
         </div>
-        <Button onClick={openCreate}><Plus className="h-4 w-4 mr-2" /> Novo Produto</Button>
+        <Button onClick={openCreate} className="w-full sm:w-auto"><Plus className="h-4 w-4 mr-2" /> Novo Produto</Button>
       </div>
 
       <div className="flex gap-3 mb-4">
-        <div className="relative flex-1 max-w-xs">
+        <div className="relative flex-1 sm:max-w-xs">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Buscar..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
         </div>
