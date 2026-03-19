@@ -45,6 +45,7 @@ export function VoiceAssistant() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [listening, setListening] = useState(false);
+  const [startingListening, setStartingListening] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(false);
   const [interimTranscript, setInterimTranscript] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -52,6 +53,9 @@ export function VoiceAssistant() {
   const listeningRef = useRef(false);
   const transcriptBaseRef = useRef("");
   const restartTimeoutRef = useRef<number | null>(null);
+  const startTimeoutRef = useRef<number | null>(null);
+  const startSequenceRef = useRef(0);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
 
   const [position, setPosition] = useState<{ x: number; y: number }>({
     x: typeof window !== "undefined" ? window.innerWidth - 460 : 500,
@@ -66,27 +70,52 @@ export function VoiceAssistant() {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages]);
 
+  const stopMediaStream = useCallback(() => {
+    mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
+    mediaStreamRef.current = null;
+  }, []);
+
   const stopRecognition = useCallback((resetPreview = false) => {
+    startSequenceRef.current += 1;
     listeningRef.current = false;
     setListening(false);
+    setStartingListening(false);
 
     if (restartTimeoutRef.current !== null) {
       window.clearTimeout(restartTimeoutRef.current);
       restartTimeoutRef.current = null;
     }
 
+    if (startTimeoutRef.current !== null) {
+      window.clearTimeout(startTimeoutRef.current);
+      startTimeoutRef.current = null;
+    }
+
     const recognition = recognitionRef.current;
     recognitionRef.current = null;
 
-    try {
-      recognition?.stop?.();
-    } catch (_) {}
+    if (recognition) {
+      recognition.onstart = null;
+      recognition.onresult = null;
+      recognition.onerror = null;
+      recognition.onend = null;
+
+      try {
+        recognition.stop?.();
+      } catch (_) {}
+
+      try {
+        recognition.abort?.();
+      } catch (_) {}
+    }
+
+    stopMediaStream();
 
     if (resetPreview) {
       setInterimTranscript("");
       transcriptBaseRef.current = "";
     }
-  }, []);
+  }, [stopMediaStream]);
 
   useEffect(() => {
     return () => {
@@ -179,7 +208,7 @@ export function VoiceAssistant() {
     window.speechSynthesis.speak(utterance);
   }, [voiceEnabled]);
 
-  const startListening = useCallback(() => {
+  const startListening = useCallback(async () => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
@@ -187,18 +216,63 @@ export function VoiceAssistant() {
       return;
     }
 
-    if (recognitionRef.current) {
-      stopRecognition();
+    if (!navigator.mediaDevices?.getUserMedia) {
+      toast({ title: "Microfone indisponível neste navegador", variant: "destructive" });
+      return;
     }
 
+    if (recognitionRef.current || listeningRef.current || startingListening) {
+      return;
+    }
+
+    const startSequence = startSequenceRef.current + 1;
+    startSequenceRef.current = startSequence;
     transcriptBaseRef.current = input.trim();
     setInterimTranscript("");
+    setStartingListening(true);
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+      });
+
+      if (startSequenceRef.current !== startSequence) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
+
+      mediaStreamRef.current = stream;
+    } catch (error: any) {
+      setStartingListening(false);
+      const denied = error?.name === "NotAllowedError" || error?.name === "SecurityError";
+      toast({
+        title: denied ? "Permissão do microfone negada" : "Não foi possível acessar o microfone",
+        variant: "destructive",
+      });
+      return;
+    }
 
     const recognition = new SpeechRecognition();
     recognition.lang = "pt-BR";
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.maxAlternatives = 1;
+
+    recognition.onstart = () => {
+      if (startTimeoutRef.current !== null) {
+        window.clearTimeout(startTimeoutRef.current);
+        startTimeoutRef.current = null;
+      }
+
+      stopMediaStream();
+      listeningRef.current = true;
+      setStartingListening(false);
+      setListening(true);
+    };
 
     recognition.onresult = (event: any) => {
       let finalChunk = "";
@@ -226,6 +300,8 @@ export function VoiceAssistant() {
 
     recognition.onerror = (event: any) => {
       const error = event?.error;
+      setStartingListening(false);
+      stopMediaStream();
 
       if (error === "aborted") return;
 
@@ -247,7 +323,16 @@ export function VoiceAssistant() {
     };
 
     recognition.onend = () => {
-      if (!listeningRef.current || recognitionRef.current !== recognition) return;
+      stopMediaStream();
+
+      if (recognitionRef.current !== recognition) return;
+
+      if (!listeningRef.current) {
+        recognitionRef.current = null;
+        setListening(false);
+        setStartingListening(false);
+        return;
+      }
 
       restartTimeoutRef.current = window.setTimeout(() => {
         if (!listeningRef.current || recognitionRef.current !== recognition) return;
@@ -260,20 +345,33 @@ export function VoiceAssistant() {
     };
 
     recognitionRef.current = recognition;
-    listeningRef.current = true;
-    setListening(true);
 
-    recognition.start();
-  }, [input, stopRecognition, toast]);
+    startTimeoutRef.current = window.setTimeout(() => {
+      if (recognitionRef.current !== recognition || listeningRef.current) return;
+      stopRecognition();
+      toast({
+        title: "Não foi possível iniciar o microfone",
+        description: "Tente novamente ou verifique a permissão do navegador.",
+        variant: "destructive",
+      });
+    }, 4000);
 
-  const toggleListening = useCallback(() => {
-    if (listeningRef.current) {
+    try {
+      recognition.start();
+    } catch (_) {
+      stopRecognition();
+      toast({ title: "Falha ao iniciar a gravação", variant: "destructive" });
+    }
+  }, [input, startingListening, stopMediaStream, stopRecognition, toast]);
+
+  const toggleListening = useCallback(async () => {
+    if (startingListening || listeningRef.current) {
       stopRecognition();
       return;
     }
 
-    startListening();
-  }, [startListening, stopRecognition]);
+    await startListening();
+  }, [startListening, startingListening, stopRecognition]);
 
   const sendMessage = useCallback(async (text?: string) => {
     stopRecognition();
@@ -325,6 +423,7 @@ export function VoiceAssistant() {
     }
   }, [input, interimTranscript, loading, messages, speak, stopRecognition, toast, user?.id]);
 
+  const isMicActive = listening || startingListening;
   const inputValue = [input, listening ? interimTranscript : ""].filter(Boolean).join(input && interimTranscript ? " " : "");
 
   const triggerButton = (
@@ -439,17 +538,17 @@ export function VoiceAssistant() {
         <div className="border-t border-border p-3 flex gap-2 items-end">
           <Button
             type="button"
-            variant={listening ? "destructive" : "outline"}
+            variant={isMicActive ? "destructive" : "outline"}
             size="icon"
-            className={`shrink-0 h-9 w-9 ${listening ? "animate-pulse" : ""}`}
-            onClick={toggleListening}
+            className={`shrink-0 h-9 w-9 ${isMicActive ? "animate-pulse" : ""}`}
+            onClick={() => void toggleListening()}
             disabled={loading}
-            aria-label={listening ? "Parar gravação" : "Iniciar gravação"}
+            aria-label={isMicActive ? "Parar gravação" : "Iniciar gravação"}
           >
-            {listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+            {isMicActive ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
           </Button>
           <Textarea
-            placeholder={listening ? "Ouvindo..." : "Digite ou fale..."}
+            placeholder={startingListening ? "Ativando microfone..." : listening ? "Ouvindo..." : "Digite ou fale..."}
             value={inputValue}
             onChange={(e) => {
               setInput(e.target.value);
