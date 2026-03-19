@@ -256,13 +256,13 @@ const CeoFinanceiro = () => {
     bank_account: "Conta Bancária", credit_card: "Cartão de Crédito",
   };
 
-  if (loading) return <div className="p-6 space-y-4">{[1,2,3].map(i => <Skeleton key={i} className="h-24 w-full" />)}</div>;
+  if (loading) return <div className="p-4 md:p-6 space-y-4">{[1,2,3].map(i => <Skeleton key={i} className="h-24 w-full" />)}</div>;
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between">
+    <div className="p-4 md:p-6 space-y-4 md:space-y-6 max-w-7xl mx-auto">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Financeiro</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground">Financeiro</h1>
           <p className="text-muted-foreground text-sm">Gestão financeira empresarial</p>
         </div>
       </div>
