@@ -153,10 +153,10 @@ export function VoiceAssistant() {
 
   const toggleListening = useCallback(() => {
     if (listening) {
-      recognitionRef.current?.stop();
-      recognitionRef.current = null;
       listeningRef.current = false;
       setListening(false);
+      try { recognitionRef.current?.stop(); } catch (_) {}
+      recognitionRef.current = null;
       return;
     }
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
