@@ -23,7 +23,7 @@ const sttCorrections: Record<string, string> = {
   "ceo": "CEO", "c e o": "CEO", "c.e.o": "CEO",
 };
 
-function correctTranscript(text: string): string {
+function correctTranscript(text: string) {
   let corrected = text;
   for (const [wrong, right] of Object.entries(sttCorrections)) {
     corrected = corrected.replace(new RegExp(`\\b${wrong}\\b`, "gi"), right);
@@ -46,11 +46,13 @@ export function VoiceAssistant() {
   const [loading, setLoading] = useState(false);
   const [listening, setListening] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(false);
+  const [interimTranscript, setInterimTranscript] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
   const listeningRef = useRef(false);
+  const transcriptBaseRef = useRef("");
+  const restartTimeoutRef = useRef<number | null>(null);
 
-  // Drag state
   const [position, setPosition] = useState<{ x: number; y: number }>({
     x: typeof window !== "undefined" ? window.innerWidth - 460 : 500,
     y: typeof window !== "undefined" ? window.innerHeight - 520 : 300,
@@ -58,19 +60,41 @@ export function VoiceAssistant() {
   const [dragging, setDragging] = useState(false);
   const dragOffset = useRef({ x: 0, y: 0 });
   const panelRef = useRef<HTMLDivElement>(null);
+  const [isSpeaking, setIsSpeaking] = useState(false);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages]);
 
-  useEffect(() => {
-    return () => {
-      recognitionRef.current?.stop();
-      window.speechSynthesis?.cancel();
-    };
+  const stopRecognition = useCallback((resetPreview = false) => {
+    listeningRef.current = false;
+    setListening(false);
+
+    if (restartTimeoutRef.current !== null) {
+      window.clearTimeout(restartTimeoutRef.current);
+      restartTimeoutRef.current = null;
+    }
+
+    const recognition = recognitionRef.current;
+    recognitionRef.current = null;
+
+    try {
+      recognition?.stop?.();
+    } catch (_) {}
+
+    if (resetPreview) {
+      setInterimTranscript("");
+      transcriptBaseRef.current = "";
+    }
   }, []);
 
-  // Reset position to bottom-right when opening
+  useEffect(() => {
+    return () => {
+      stopRecognition(true);
+      window.speechSynthesis?.cancel();
+    };
+  }, [stopRecognition]);
+
   useEffect(() => {
     if (open && !maximized) {
       setPosition({
@@ -78,9 +102,8 @@ export function VoiceAssistant() {
         y: window.innerHeight - 520,
       });
     }
-  }, [open]);
+  }, [open, maximized]);
 
-  // Drag handlers
   const onDragStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     if (maximized) return;
     e.preventDefault();
@@ -95,6 +118,7 @@ export function VoiceAssistant() {
 
   useEffect(() => {
     if (!dragging) return;
+
     const onMove = (e: MouseEvent | TouchEvent) => {
       e.preventDefault();
       const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
@@ -105,11 +129,14 @@ export function VoiceAssistant() {
       const y = Math.max(0, Math.min(window.innerHeight - panelH, clientY - dragOffset.current.y));
       setPosition({ x, y });
     };
+
     const onUp = () => setDragging(false);
+
     window.addEventListener("mousemove", onMove, { passive: false });
     window.addEventListener("mouseup", onUp);
     window.addEventListener("touchmove", onMove, { passive: false });
     window.addEventListener("touchend", onUp);
+
     return () => {
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mouseup", onUp);
@@ -122,8 +149,6 @@ export function VoiceAssistant() {
     if (maximized) setPosition({ x: 0, y: 0 });
   }, [maximized]);
 
-  const [isSpeaking, setIsSpeaking] = useState(false);
-
   const stopSpeaking = useCallback(() => {
     window.speechSynthesis?.cancel();
     setIsSpeaking(false);
@@ -131,7 +156,9 @@ export function VoiceAssistant() {
 
   const speak = useCallback((text: string) => {
     if (!voiceEnabled || !("speechSynthesis" in window)) return;
+
     window.speechSynthesis.cancel();
+
     let clean = text;
     clean = clean.replace(/#{1,6}\s*/g, "");
     clean = clean.replace(/\*{1,3}([^*]+)\*{1,3}/g, "$1");
@@ -142,6 +169,7 @@ export function VoiceAssistant() {
     clean = clean.replace(/^[-•*]\s*/gm, "");
     clean = clean.replace(/^\d+\.\s*/gm, "");
     clean = clean.replace(/\n+/g, ". ").replace(/\s{2,}/g, " ").replace(/\.\s*\./g, ".").trim();
+
     const utterance = new SpeechSynthesisUtterance(clean);
     utterance.lang = "pt-BR";
     utterance.rate = 1.6;
@@ -151,58 +179,118 @@ export function VoiceAssistant() {
     window.speechSynthesis.speak(utterance);
   }, [voiceEnabled]);
 
-  const toggleListening = useCallback(() => {
-    if (listening) {
-      listeningRef.current = false;
-      setListening(false);
-      try { recognitionRef.current?.stop(); } catch (_) {}
-      recognitionRef.current = null;
-      return;
-    }
+  const startListening = useCallback(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
     if (!SpeechRecognition) {
       toast({ title: "Navegador não suporta reconhecimento de voz", variant: "destructive" });
       return;
     }
+
+    if (recognitionRef.current) {
+      stopRecognition();
+    }
+
+    transcriptBaseRef.current = input.trim();
+    setInterimTranscript("");
+
     const recognition = new SpeechRecognition();
     recognition.lang = "pt-BR";
     recognition.continuous = true;
     recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
+
     recognition.onresult = (event: any) => {
+      let finalChunk = "";
+      let interimChunk = "";
+
       for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = correctTranscript(event.results[i][0].transcript.trim());
+        if (!transcript) continue;
+
         if (event.results[i].isFinal) {
-          const transcript = event.results[i][0].transcript;
-          const corrected = correctTranscript(transcript.trim());
-          setInput((prev) => (prev ? prev + " " + corrected : corrected));
+          finalChunk += `${transcript} `;
+        } else {
+          interimChunk += `${transcript} `;
         }
       }
+
+      if (finalChunk) {
+        const nextBase = [transcriptBaseRef.current, finalChunk.trim()].filter(Boolean).join(" ").trim();
+        transcriptBaseRef.current = nextBase;
+        setInput(nextBase);
+      }
+
+      setInterimTranscript(interimChunk.trim());
     };
-    recognition.onerror = (e: any) => {
-      if (e.error !== "no-speech" && e.error !== "aborted") {
-        listeningRef.current = false;
-        setListening(false);
+
+    recognition.onerror = (event: any) => {
+      const error = event?.error;
+
+      if (error === "aborted") return;
+
+      if (error === "not-allowed" || error === "service-not-allowed") {
+        stopRecognition(true);
+        toast({ title: "Permissão do microfone negada", variant: "destructive" });
+        return;
+      }
+
+      if (error === "audio-capture") {
+        stopRecognition(true);
+        toast({ title: "Não foi possível acessar o microfone", variant: "destructive" });
+        return;
+      }
+
+      if (error !== "no-speech") {
+        stopRecognition();
       }
     };
+
     recognition.onend = () => {
-      // Auto-restart if user hasn't manually stopped
-      if (listeningRef.current) {
-        try { recognition.start(); } catch (_) {}
-      }
+      if (!listeningRef.current || recognitionRef.current !== recognition) return;
+
+      restartTimeoutRef.current = window.setTimeout(() => {
+        if (!listeningRef.current || recognitionRef.current !== recognition) return;
+        try {
+          recognition.start();
+        } catch (_) {
+          stopRecognition();
+        }
+      }, 150);
     };
+
     recognitionRef.current = recognition;
     listeningRef.current = true;
-    recognition.start();
     setListening(true);
-  }, [listening, toast]);
 
-  const sendMessage = async (text?: string) => {
-    const msg = (text || input).trim();
+    recognition.start();
+  }, [input, stopRecognition, toast]);
+
+  const toggleListening = useCallback(() => {
+    if (listeningRef.current) {
+      stopRecognition();
+      return;
+    }
+
+    startListening();
+  }, [startListening, stopRecognition]);
+
+  const sendMessage = useCallback(async (text?: string) => {
+    stopRecognition();
+
+    const previewText = [input.trim(), interimTranscript.trim()].filter(Boolean).join(" ").trim();
+    const msg = (text ?? previewText).trim();
     if (!msg || loading) return;
+
     const userMsg: Message = { role: "user", content: msg };
     const updatedMessages = [...messages, userMsg];
+
     setMessages(updatedMessages);
     setInput("");
+    setInterimTranscript("");
+    transcriptBaseRef.current = "";
     setLoading(true);
+
     try {
       const { data, error } = await supabase.functions.invoke("ceo-ai-assistant", {
         body: {
@@ -212,23 +300,33 @@ export function VoiceAssistant() {
           user_id: user?.id,
         },
       });
+
       if (error) throw error;
+
       const reply = data?.reply || "Desculpe, não consegui processar.";
       const createdEntities = data?.created_entities || [];
+
       if (createdEntities.length > 0) {
         toast({ title: `${createdEntities.length} entidade(s) criada(s)`, description: createdEntities.join(", ") });
       }
+
       setMessages((prev) => [...prev, { role: "assistant", content: reply, createdEntities }]);
       speak(reply);
     } catch (err: any) {
-      const errorMsg = err?.message?.includes("429") ? "Muitas requisições. Aguarde." : err?.message?.includes("402") ? "Créditos esgotados." : "Erro ao processar. Tente novamente.";
+      const errorMsg = err?.message?.includes("429")
+        ? "Muitas requisições. Aguarde."
+        : err?.message?.includes("402")
+          ? "Créditos esgotados."
+          : "Erro ao processar. Tente novamente.";
+
       setMessages((prev) => [...prev, { role: "assistant", content: errorMsg }]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [input, interimTranscript, loading, messages, speak, stopRecognition, toast, user?.id]);
 
-  // Trigger button (always in header)
+  const inputValue = [input, listening ? interimTranscript : ""].filter(Boolean).join(input && interimTranscript ? " " : "");
+
   const triggerButton = (
     <Button
       onClick={() => setOpen(true)}
@@ -256,7 +354,6 @@ export function VoiceAssistant() {
         style={panelStyle}
         className={`bg-background border border-border shadow-2xl flex flex-col overflow-hidden ${maximized ? "" : "rounded-xl"}`}
       >
-        {/* Draggable Header */}
         <div
           className={`flex items-center justify-between px-3 py-2 border-b border-border bg-muted/30 select-none ${maximized ? "" : "cursor-grab active:cursor-grabbing"}`}
           onMouseDown={onDragStart}
@@ -281,13 +378,21 @@ export function VoiceAssistant() {
             <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setMaximized(!maximized)}>
               {maximized ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
             </Button>
-            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => { setOpen(false); setMaximized(false); }}>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              onClick={() => {
+                stopRecognition(true);
+                setOpen(false);
+                setMaximized(false);
+              }}
+            >
               <X className="h-3.5 w-3.5" />
             </Button>
           </div>
         </div>
 
-        {/* Messages */}
         <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 space-y-3">
           {messages.map((msg, i) => (
             <div key={i} className={`flex gap-2 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
@@ -331,28 +436,43 @@ export function VoiceAssistant() {
           )}
         </div>
 
-        {/* Input */}
         <div className="border-t border-border p-3 flex gap-2 items-end">
           <Button
+            type="button"
             variant={listening ? "destructive" : "outline"}
             size="icon"
             className={`shrink-0 h-9 w-9 ${listening ? "animate-pulse" : ""}`}
             onClick={toggleListening}
             disabled={loading}
+            aria-label={listening ? "Parar gravação" : "Iniciar gravação"}
           >
             {listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
           </Button>
           <Textarea
             placeholder={listening ? "Ouvindo..." : "Digite ou fale..."}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
+            value={inputValue}
+            onChange={(e) => {
+              setInput(e.target.value);
+              transcriptBaseRef.current = e.target.value;
+              setInterimTranscript("");
+            }}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+              }
             }}
             className="resize-none min-h-[36px] max-h-[80px] text-xs"
             rows={1}
           />
-          <Button onClick={() => sendMessage()} disabled={loading || !input.trim()} size="icon" className="shrink-0 h-9 w-9">
+          <Button
+            type="button"
+            onClick={() => sendMessage()}
+            disabled={loading || !inputValue.trim()}
+            size="icon"
+            className="shrink-0 h-9 w-9"
+            aria-label="Enviar mensagem"
+          >
             <Send className="h-4 w-4" />
           </Button>
         </div>
