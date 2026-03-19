@@ -53,13 +53,13 @@ const CeoOrganizations = () => {
   const selectedOrg = data.find(o => o.id === detailId);
 
   return (
-    <div className="p-6 space-y-4 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between flex-wrap gap-3">
+    <div className="p-4 md:p-6 space-y-4 max-w-7xl mx-auto">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2"><Building2 className="h-6 w-6" /> Organizações</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground flex items-center gap-2"><Building2 className="h-5 w-5 sm:h-6 sm:w-6" /> Organizações</h1>
           <p className="text-muted-foreground text-sm">Clientes, parceiros, instituições e pilotos</p>
         </div>
-        <Button onClick={openCreate}><Plus className="h-4 w-4 mr-1" /> Nova Organização</Button>
+        <Button onClick={openCreate} className="w-full sm:w-auto"><Plus className="h-4 w-4 mr-1" /> Nova Organização</Button>
       </div>
 
       <div className="flex flex-wrap gap-3 items-center">

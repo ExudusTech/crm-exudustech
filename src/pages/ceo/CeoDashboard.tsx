@@ -79,13 +79,13 @@ const CeoDashboard = () => {
     load();
   }, []);
 
-  if (loading) return <div className="p-6 space-y-4">{[1,2,3,4].map(i => <Skeleton key={i} className="h-24 w-full" />)}</div>;
+  if (loading) return <div className="p-4 md:p-6 space-y-4">{[1,2,3,4].map(i => <Skeleton key={i} className="h-24 w-full" />)}</div>;
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between">
+    <div className="p-4 md:p-6 space-y-4 md:space-y-6 max-w-7xl mx-auto">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Dashboard Executivo</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground">Dashboard Executivo</h1>
           <p className="text-muted-foreground text-sm">Visão consolidada do negócio</p>
         </div>
         <div className="flex gap-2">
@@ -259,7 +259,7 @@ const CeoDashboard = () => {
       <Card>
         <CardHeader><CardTitle className="text-base">Atalhos Rápidos</CardTitle></CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
             {[
               { icon: CheckSquare, label: "Criar Tarefa", path: "/ceo/tarefas" },
               { icon: Radar, label: "Ver Radar", path: "/ceo/radar" },

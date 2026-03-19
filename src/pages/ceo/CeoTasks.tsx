@@ -69,15 +69,15 @@ const CeoTasks = () => {
   };
 
   return (
-    <div className="p-6 space-y-4 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between flex-wrap gap-3">
+    <div className="p-4 md:p-6 space-y-4 max-w-7xl mx-auto">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <CheckSquare className="h-6 w-6" /> Tarefas
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground flex items-center gap-2">
+            <CheckSquare className="h-5 w-5 sm:h-6 sm:w-6" /> Tarefas
           </h1>
           <p className="text-muted-foreground text-sm">Gestão operacional detalhada</p>
         </div>
-        <Button onClick={openCreate}><Plus className="h-4 w-4 mr-1" /> Nova Tarefa</Button>
+        <Button onClick={openCreate} className="w-full sm:w-auto"><Plus className="h-4 w-4 mr-1" /> Nova Tarefa</Button>
       </div>
 
       {/* Filters */}

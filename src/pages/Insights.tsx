@@ -527,10 +527,10 @@ export default function Insights() {
             </Link>
           </div>
           <div className="flex items-center gap-3">
-            <TrendingUp className="h-8 w-8 text-primary" />
+            <TrendingUp className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
             <div>
-              <h1 className="text-2xl md:text-4xl font-bold">Insights</h1>
-              <p className="text-muted-foreground">Últimos {monthsToShow} meses</p>
+              <h1 className="text-xl sm:text-2xl md:text-4xl font-bold">Insights</h1>
+              <p className="text-muted-foreground text-sm">Últimos {monthsToShow} meses</p>
             </div>
           </div>
         </div>

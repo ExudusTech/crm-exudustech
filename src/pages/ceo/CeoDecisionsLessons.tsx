@@ -61,16 +61,16 @@ const CeoDecisionsLessons = () => {
     fetchAll();
   };
 
-  if (loading) return <div className="p-6"><Skeleton className="h-8 w-48 mb-4" /><Skeleton className="h-[300px] w-full" /></div>;
+  if (loading) return <div className="p-4 md:p-6"><Skeleton className="h-8 w-48 mb-4" /><Skeleton className="h-[300px] w-full" /></div>;
 
   const filteredDecisions = decisions.filter(d => !search || d.title.toLowerCase().includes(search.toLowerCase()));
   const filteredLessons = lessons.filter(l => !search || l.title.toLowerCase().includes(search.toLowerCase()));
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-4">
-      <div className="flex items-center justify-between">
+    <div className="p-4 md:p-6 max-w-7xl mx-auto space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Memória Institucional</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground">Memória Institucional</h1>
           <p className="text-muted-foreground text-sm">Decisões e lições aprendidas</p>
         </div>
       </div>
