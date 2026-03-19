@@ -83,12 +83,12 @@ const Profile = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-3xl mx-auto px-4 py-8 space-y-6">
+      <div className="max-w-3xl mx-auto px-4 py-6 md:py-8 space-y-4 md:space-y-6">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="text-2xl font-bold">Meu Perfil</h1>
+          <h1 className="text-xl sm:text-2xl font-bold">Meu Perfil</h1>
         </div>
 
         {/* User Info */}
