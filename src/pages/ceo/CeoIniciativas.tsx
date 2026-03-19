@@ -45,16 +45,16 @@ const CeoIniciativas = () => {
     return true;
   });
 
-  if (loading) return <div className="p-6 max-w-7xl mx-auto"><Skeleton className="h-8 w-48 mb-4" /><Skeleton className="h-[300px] w-full" /></div>;
+  if (loading) return <div className="p-4 md:p-6 max-w-7xl mx-auto"><Skeleton className="h-8 w-48 mb-4" /><Skeleton className="h-[300px] w-full" /></div>;
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
+    <div className="p-4 md:p-6 max-w-7xl mx-auto">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2"><Target className="h-6 w-6" /> Iniciativas</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground flex items-center gap-2"><Target className="h-5 w-5 sm:h-6 sm:w-6" /> Iniciativas</h1>
           <p className="text-muted-foreground text-sm">Guarda-chuvas executivos do que está sendo feito.</p>
         </div>
-        <Button onClick={() => navigate("/ceo/iniciativas/nova")}><Plus className="h-4 w-4 mr-2" /> Nova Iniciativa</Button>
+        <Button onClick={() => navigate("/ceo/iniciativas/nova")} className="w-full sm:w-auto"><Plus className="h-4 w-4 mr-2" /> Nova Iniciativa</Button>
       </div>
 
       <div className="flex gap-3 mb-4">
