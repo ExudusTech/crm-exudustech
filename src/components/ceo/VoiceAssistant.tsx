@@ -208,52 +208,12 @@ export function VoiceAssistant() {
     window.speechSynthesis.speak(utterance);
   }, [voiceEnabled]);
 
-  const startListening = useCallback(async () => {
+  const initializeRecognition = useCallback(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
       toast({ title: "Navegador não suporta reconhecimento de voz", variant: "destructive" });
-      return;
-    }
-
-    if (!navigator.mediaDevices?.getUserMedia) {
-      toast({ title: "Microfone indisponível neste navegador", variant: "destructive" });
-      return;
-    }
-
-    if (recognitionRef.current || listeningRef.current || startingListening) {
-      return;
-    }
-
-    const startSequence = startSequenceRef.current + 1;
-    startSequenceRef.current = startSequence;
-    transcriptBaseRef.current = input.trim();
-    setInterimTranscript("");
-    setStartingListening(true);
-
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        },
-      });
-
-      if (startSequenceRef.current !== startSequence) {
-        stream.getTracks().forEach((track) => track.stop());
-        return;
-      }
-
-      mediaStreamRef.current = stream;
-    } catch (error: any) {
-      setStartingListening(false);
-      const denied = error?.name === "NotAllowedError" || error?.name === "SecurityError";
-      toast({
-        title: denied ? "Permissão do microfone negada" : "Não foi possível acessar o microfone",
-        variant: "destructive",
-      });
-      return;
+      return null;
     }
 
     const recognition = new SpeechRecognition();
@@ -268,7 +228,6 @@ export function VoiceAssistant() {
         startTimeoutRef.current = null;
       }
 
-      stopMediaStream();
       listeningRef.current = true;
       setStartingListening(false);
       setListening(true);
@@ -301,7 +260,6 @@ export function VoiceAssistant() {
     recognition.onerror = (event: any) => {
       const error = event?.error;
       setStartingListening(false);
-      stopMediaStream();
 
       if (error === "aborted") return;
 
@@ -323,14 +281,13 @@ export function VoiceAssistant() {
     };
 
     recognition.onend = () => {
-      stopMediaStream();
-
       if (recognitionRef.current !== recognition) return;
 
       if (!listeningRef.current) {
         recognitionRef.current = null;
         setListening(false);
         setStartingListening(false);
+        stopMediaStream();
         return;
       }
 
@@ -344,34 +301,79 @@ export function VoiceAssistant() {
       }, 150);
     };
 
-    recognitionRef.current = recognition;
+    return recognition;
+  }, [stopMediaStream, stopRecognition, toast]);
 
-    startTimeoutRef.current = window.setTimeout(() => {
-      if (recognitionRef.current !== recognition || listeningRef.current) return;
-      stopRecognition();
-      toast({
-        title: "Não foi possível iniciar o microfone",
-        description: "Tente novamente ou verifique a permissão do navegador.",
-        variant: "destructive",
-      });
-    }, 4000);
-
-    try {
-      recognition.start();
-    } catch (_) {
-      stopRecognition();
-      toast({ title: "Falha ao iniciar a gravação", variant: "destructive" });
-    }
-  }, [input, startingListening, stopMediaStream, stopRecognition, toast]);
-
-  const toggleListening = useCallback(async () => {
+  const handleMicClick = useCallback(() => {
     if (startingListening || listeningRef.current) {
       stopRecognition();
       return;
     }
 
-    await startListening();
-  }, [startListening, startingListening, stopRecognition]);
+    if (!navigator.mediaDevices?.getUserMedia) {
+      toast({ title: "Microfone indisponível neste navegador", variant: "destructive" });
+      return;
+    }
+
+    if (recognitionRef.current) {
+      stopRecognition();
+    }
+
+    const recognition = initializeRecognition();
+    if (!recognition) return;
+
+    const startSequence = startSequenceRef.current + 1;
+    startSequenceRef.current = startSequence;
+    transcriptBaseRef.current = input.trim();
+    setInterimTranscript("");
+    setStartingListening(true);
+    recognitionRef.current = recognition;
+
+    navigator.mediaDevices.getUserMedia({
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+      },
+    }).then((stream) => {
+      if (startSequenceRef.current !== startSequence || recognitionRef.current !== recognition) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
+
+      mediaStreamRef.current = stream;
+
+      startTimeoutRef.current = window.setTimeout(() => {
+        if (recognitionRef.current !== recognition || listeningRef.current) return;
+        stopRecognition();
+        toast({
+          title: "Não foi possível iniciar o microfone",
+          description: "Tente novamente ou verifique a permissão do navegador.",
+          variant: "destructive",
+        });
+      }, 4000);
+
+      try {
+        recognition.start();
+      } catch (_) {
+        stopRecognition();
+        toast({ title: "Falha ao iniciar a gravação", variant: "destructive" });
+      }
+    }).catch((error: any) => {
+      if (recognitionRef.current === recognition) {
+        recognitionRef.current = null;
+      }
+
+      setStartingListening(false);
+      stopMediaStream();
+
+      const denied = error?.name === "NotAllowedError" || error?.name === "SecurityError";
+      toast({
+        title: denied ? "Permissão do microfone negada" : "Não foi possível acessar o microfone",
+        variant: "destructive",
+      });
+    });
+  }, [initializeRecognition, input, startingListening, stopMediaStream, stopRecognition, toast]);
 
   const sendMessage = useCallback(async (text?: string) => {
     stopRecognition();
