@@ -121,9 +121,9 @@ export function VoiceAssistant() {
   useEffect(() => {
     return () => {
       stopRecognition(true);
-      window.speechSynthesis?.cancel();
+      tts.stop();
     };
-  }, [stopRecognition]);
+  }, [stopRecognition, tts]);
 
   useEffect(() => {
     if (open && !maximized) {
