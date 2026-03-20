@@ -65,7 +65,7 @@ export function VoiceAssistant() {
   const [dragging, setDragging] = useState(false);
   const dragOffset = useRef({ x: 0, y: 0 });
   const panelRef = useRef<HTMLDivElement>(null);
-  const [isSpeaking, setIsSpeaking] = useState(false);
+  const tts = useTTS({ enabled: voiceEnabled });
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
