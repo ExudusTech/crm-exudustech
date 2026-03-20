@@ -396,7 +396,7 @@ export function VoiceAssistant() {
     } finally {
       setLoading(false);
     }
-  }, [input, interimTranscript, loading, messages, speak, stopRecognition, toast, user?.id]);
+  }, [input, interimTranscript, loading, messages, tts, stopRecognition, toast, user?.id]);
 
   const isMicActive = listening || startingListening;
   const inputValue = [input, listening ? interimTranscript : ""].filter(Boolean).join(input && interimTranscript ? " " : "");
