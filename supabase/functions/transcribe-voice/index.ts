@@ -6,34 +6,16 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Process base64 in chunks to prevent memory issues
-function processBase64Chunks(base64String: string, chunkSize = 32768) {
-  const chunks: Uint8Array[] = [];
-  let position = 0;
-  
-  while (position < base64String.length) {
-    const chunk = base64String.slice(position, position + chunkSize);
-    const binaryChunk = atob(chunk);
-    const bytes = new Uint8Array(binaryChunk.length);
-    
-    for (let i = 0; i < binaryChunk.length; i++) {
-      bytes[i] = binaryChunk.charCodeAt(i);
-    }
-    
-    chunks.push(bytes);
-    position += chunkSize;
+function base64ToUint8Array(base64String: string) {
+  const cleanedBase64 = base64String.replace(/^data:.*;base64,/, '');
+  const binary = atob(cleanedBase64);
+  const bytes = new Uint8Array(binary.length);
+
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
   }
 
-  const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
-  const result = new Uint8Array(totalLength);
-  let offset = 0;
-
-  for (const chunk of chunks) {
-    result.set(chunk, offset);
-    offset += chunk.length;
-  }
-
-  return result;
+  return bytes;
 }
 
 serve(async (req) => {
@@ -42,24 +24,24 @@ serve(async (req) => {
   }
 
   try {
-    const { audio } = await req.json();
-    
+    const { audio, mimeType, language } = await req.json();
+
     if (!audio) {
       throw new Error('No audio data provided');
     }
 
     console.log('Transcribing audio...');
 
-    // Process audio in chunks
-    const binaryAudio = processBase64Chunks(audio);
-    
-    // Prepare form data
-    const formData = new FormData();
-    const blob = new Blob([binaryAudio], { type: 'audio/webm' });
-    formData.append('file', blob, 'audio.webm');
-    formData.append('model', 'whisper-1');
+    const binaryAudio = base64ToUint8Array(audio);
 
-    // Send to OpenAI
+    const formData = new FormData();
+    const resolvedMimeType = typeof mimeType === 'string' && mimeType ? mimeType : 'audio/webm';
+    const extension = resolvedMimeType.includes('ogg') ? 'ogg' : resolvedMimeType.includes('mp4') ? 'mp4' : 'webm';
+    const blob = new Blob([binaryAudio], { type: resolvedMimeType });
+    formData.append('file', blob, `audio.${extension}`);
+    formData.append('model', 'whisper-1');
+    formData.append('language', typeof language === 'string' && language ? language : 'pt');
+
     const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
       method: 'POST',
       headers: {
@@ -81,7 +63,6 @@ serve(async (req) => {
       JSON.stringify({ text: result.text }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-
   } catch (error) {
     console.error('Transcription error:', error);
     return new Response(

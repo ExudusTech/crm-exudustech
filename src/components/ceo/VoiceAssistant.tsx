@@ -1,6 +1,22 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { Mic, MicOff, X, Send, Bot, User, Loader2, Volume2, VolumeX, Maximize2, Minimize2, GripHorizontal, Square, Pause, Play } from "lucide-react";
+import {
+  Mic,
+  MicOff,
+  X,
+  Send,
+  Bot,
+  User,
+  Loader2,
+  Volume2,
+  VolumeX,
+  Maximize2,
+  Minimize2,
+  GripHorizontal,
+  Square,
+  Pause,
+  Play,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -20,8 +36,12 @@ interface Message {
 }
 
 const sttCorrections: Record<string, string> = {
-  "senhor": "CEO", "Senhor": "CEO", "senhores": "CEO",
-  "ceo": "CEO", "c e o": "CEO", "c.e.o": "CEO",
+  senhor: "CEO",
+  Senhor: "CEO",
+  senhores: "CEO",
+  ceo: "CEO",
+  "c e o": "CEO",
+  "c.e.o": "CEO",
 };
 
 function correctTranscript(text: string) {
@@ -40,23 +60,21 @@ export function VoiceAssistant() {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
-      content: "Olá! Sou o assistente IA do Sistema CEO. Fale ou digite o que precisa:\n\n- 📝 **Cadastrar** iniciativas, organizações, stakeholders, tarefas, projetos\n- 🔗 **Vincular** entidades entre si\n- 📊 **Consultar** radar, agenda, finanças\n- 📧 **Emails** e 📁 **Drive**\n\nExemplo: *\"Criar projeto HMK IA com prioridade alta\"*",
+      content:
+        "Olá! Sou o assistente IA do Sistema CEO. Fale ou digite o que precisa:\n\n- 📝 **Cadastrar** iniciativas, organizações, stakeholders, tarefas, projetos\n- 🔗 **Vincular** entidades entre si\n- 📊 **Consultar** radar, agenda, finanças\n- 📧 **Emails** e 📁 **Drive**\n\nExemplo: *\"Criar projeto HMK IA com prioridade alta\"*",
     },
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [listening, setListening] = useState(false);
   const [startingListening, setStartingListening] = useState(false);
+  const [transcribingAudio, setTranscribingAudio] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(false);
-  const [interimTranscript, setInterimTranscript] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
-  const recognitionRef = useRef<any>(null);
-  const listeningRef = useRef(false);
-  const transcriptBaseRef = useRef("");
-  const restartTimeoutRef = useRef<number | null>(null);
-  const startTimeoutRef = useRef<number | null>(null);
-  const startSequenceRef = useRef(0);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const shouldTranscribeOnStopRef = useRef(true);
 
   const [position, setPosition] = useState<{ x: number; y: number }>({
     x: typeof window !== "undefined" ? window.innerWidth - 460 : 500,
@@ -76,47 +94,94 @@ export function VoiceAssistant() {
     mediaStreamRef.current = null;
   }, []);
 
-  const stopRecognition = useCallback((resetPreview = false) => {
-    startSequenceRef.current += 1;
-    listeningRef.current = false;
+  const resetRecordingState = useCallback(() => {
     setListening(false);
     setStartingListening(false);
+    mediaRecorderRef.current = null;
+  }, []);
 
-    if (restartTimeoutRef.current !== null) {
-      window.clearTimeout(restartTimeoutRef.current);
-      restartTimeoutRef.current = null;
-    }
-
-    if (startTimeoutRef.current !== null) {
-      window.clearTimeout(startTimeoutRef.current);
-      startTimeoutRef.current = null;
-    }
-
-    const recognition = recognitionRef.current;
-    recognitionRef.current = null;
-
-    if (recognition) {
-      recognition.onstart = null;
-      recognition.onresult = null;
-      recognition.onerror = null;
-      recognition.onend = null;
+  const transcribeRecordedAudio = useCallback(
+    async (audioBlob: Blob) => {
+      setTranscribingAudio(true);
 
       try {
-        recognition.stop?.();
-      } catch (_) {}
+        const base64Audio = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+
+          reader.onloadend = () => {
+            const result = typeof reader.result === "string" ? reader.result : "";
+            const encoded = result.split(",")[1];
+
+            if (!encoded) {
+              reject(new Error("Falha ao preparar o áudio para transcrição"));
+              return;
+            }
+
+            resolve(encoded);
+          };
+
+          reader.onerror = () => reject(new Error("Falha ao ler o áudio gravado"));
+          reader.readAsDataURL(audioBlob);
+        });
+
+        const { data, error } = await supabase.functions.invoke("transcribe-voice", {
+          body: {
+            audio: base64Audio,
+            mimeType: audioBlob.type || "audio/webm",
+            language: "pt",
+          },
+        });
+
+        if (error) throw error;
+
+        const transcript = correctTranscript(data?.text || "").trim();
+
+        if (!transcript) {
+          toast({
+            title: "Não consegui entender o áudio",
+            description: "Tente falar mais próximo do microfone.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        setInput((prev) => [prev.trim(), transcript].filter(Boolean).join(prev.trim() ? " " : ""));
+      } catch (err: any) {
+        toast({
+          title: "Erro ao transcrever áudio",
+          description: err?.message || "Tente novamente.",
+          variant: "destructive",
+        });
+      } finally {
+        setTranscribingAudio(false);
+      }
+    },
+    [toast],
+  );
+
+  const stopRecognition = useCallback(
+    (discardAudio = false) => {
+      shouldTranscribeOnStopRef.current = !discardAudio;
+
+      const recorder = mediaRecorderRef.current;
+      if (!recorder || recorder.state === "inactive") {
+        resetRecordingState();
+        stopMediaStream();
+        return;
+      }
+
+      setListening(false);
+      setStartingListening(false);
 
       try {
-        recognition.abort?.();
-      } catch (_) {}
-    }
-
-    stopMediaStream();
-
-    if (resetPreview) {
-      setInterimTranscript("");
-      transcriptBaseRef.current = "";
-    }
-  }, [stopMediaStream]);
+        recorder.stop();
+      } catch {
+        resetRecordingState();
+        stopMediaStream();
+      }
+    },
+    [resetRecordingState, stopMediaStream],
+  );
 
   useEffect(() => {
     return () => {
@@ -134,17 +199,24 @@ export function VoiceAssistant() {
     }
   }, [open, maximized]);
 
-  const onDragStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
-    if (maximized) return;
-    e.preventDefault();
-    e.stopPropagation();
-    const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
-    const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
-    const rect = panelRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    dragOffset.current = { x: clientX - rect.left, y: clientY - rect.top };
-    setDragging(true);
+  useEffect(() => {
+    if (maximized) setPosition({ x: 0, y: 0 });
   }, [maximized]);
+
+  const onDragStart = useCallback(
+    (e: React.MouseEvent | React.TouchEvent) => {
+      if (maximized) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
+      const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
+      const rect = panelRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      dragOffset.current = { x: clientX - rect.left, y: clientY - rect.top };
+      setDragging(true);
+    },
+    [maximized],
+  );
 
   useEffect(() => {
     if (!dragging) return;
@@ -175,231 +247,146 @@ export function VoiceAssistant() {
     };
   }, [dragging]);
 
-  useEffect(() => {
-    if (maximized) setPosition({ x: 0, y: 0 });
-  }, [maximized]);
-
-  // TTS is now handled by useTTS hook
-
-  const initializeRecognition = useCallback(() => {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-
-    if (!SpeechRecognition) {
-      toast({ title: "Navegador não suporta reconhecimento de voz", variant: "destructive" });
-      return null;
-    }
-
-    const recognition = new SpeechRecognition();
-    recognition.lang = "pt-BR";
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.maxAlternatives = 1;
-
-    recognition.onstart = () => {
-      if (startTimeoutRef.current !== null) {
-        window.clearTimeout(startTimeoutRef.current);
-        startTimeoutRef.current = null;
-      }
-
-      listeningRef.current = true;
-      setStartingListening(false);
-      setListening(true);
-    };
-
-    recognition.onresult = (event: any) => {
-      let finalChunk = "";
-      let interimChunk = "";
-
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const transcript = correctTranscript(event.results[i][0].transcript.trim());
-        if (!transcript) continue;
-
-        if (event.results[i].isFinal) {
-          finalChunk += `${transcript} `;
-        } else {
-          interimChunk += `${transcript} `;
-        }
-      }
-
-      if (finalChunk) {
-        const nextBase = [transcriptBaseRef.current, finalChunk.trim()].filter(Boolean).join(" ").trim();
-        transcriptBaseRef.current = nextBase;
-        setInput(nextBase);
-      }
-
-      setInterimTranscript(interimChunk.trim());
-    };
-
-    recognition.onerror = (event: any) => {
-      const error = event?.error;
-      setStartingListening(false);
-
-      if (error === "aborted") return;
-
-      if (error === "not-allowed" || error === "service-not-allowed") {
-        stopRecognition(true);
-        toast({ title: "Permissão do microfone negada", variant: "destructive" });
-        return;
-      }
-
-      if (error === "audio-capture") {
-        stopRecognition(true);
-        toast({ title: "Não foi possível acessar o microfone", variant: "destructive" });
-        return;
-      }
-
-      if (error !== "no-speech") {
-        stopRecognition();
-      }
-    };
-
-    recognition.onend = () => {
-      if (recognitionRef.current !== recognition) return;
-
-      if (!listeningRef.current) {
-        recognitionRef.current = null;
-        setListening(false);
-        setStartingListening(false);
-        stopMediaStream();
-        return;
-      }
-
-      restartTimeoutRef.current = window.setTimeout(() => {
-        if (!listeningRef.current || recognitionRef.current !== recognition) return;
-        try {
-          recognition.start();
-        } catch (_) {
-          stopRecognition();
-        }
-      }, 150);
-    };
-
-    return recognition;
-  }, [stopMediaStream, stopRecognition, toast]);
-
   const handleMicClick = useCallback(() => {
-    if (startingListening || listeningRef.current) {
+    if (startingListening || listening) {
       stopRecognition();
       return;
     }
 
-    if (!navigator.mediaDevices?.getUserMedia) {
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
       toast({ title: "Microfone indisponível neste navegador", variant: "destructive" });
       return;
     }
 
-    if (recognitionRef.current) {
-      stopRecognition();
-    }
-
-    const recognition = initializeRecognition();
-    if (!recognition) return;
-
-    const startSequence = startSequenceRef.current + 1;
-    startSequenceRef.current = startSequence;
-    transcriptBaseRef.current = input.trim();
-    setInterimTranscript("");
     setStartingListening(true);
-    recognitionRef.current = recognition;
 
-    navigator.mediaDevices.getUserMedia({
-      audio: {
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true,
-      },
-    }).then((stream) => {
-      if (startSequenceRef.current !== startSequence || recognitionRef.current !== recognition) {
-        stream.getTracks().forEach((track) => track.stop());
-        return;
-      }
+    navigator.mediaDevices
+      .getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+      })
+      .then((stream) => {
+        mediaStreamRef.current = stream;
 
-      mediaStreamRef.current = stream;
+        const supportedMimeType = [
+          "audio/webm;codecs=opus",
+          "audio/webm",
+          "audio/ogg;codecs=opus",
+          "audio/mp4",
+        ].find((mimeType) => MediaRecorder.isTypeSupported?.(mimeType));
 
-      startTimeoutRef.current = window.setTimeout(() => {
-        if (recognitionRef.current !== recognition || listeningRef.current) return;
-        stopRecognition();
+        const recorder = supportedMimeType
+          ? new MediaRecorder(stream, { mimeType: supportedMimeType })
+          : new MediaRecorder(stream);
+
+        audioChunksRef.current = [];
+        shouldTranscribeOnStopRef.current = true;
+        mediaRecorderRef.current = recorder;
+
+        recorder.onstart = () => {
+          setStartingListening(false);
+          setListening(true);
+        };
+
+        recorder.ondataavailable = (event) => {
+          if (event.data.size > 0) {
+            audioChunksRef.current.push(event.data);
+          }
+        };
+
+        recorder.onerror = () => {
+          resetRecordingState();
+          stopMediaStream();
+          toast({ title: "Falha ao gravar áudio", variant: "destructive" });
+        };
+
+        recorder.onstop = async () => {
+          const shouldTranscribe = shouldTranscribeOnStopRef.current;
+          const chunks = audioChunksRef.current;
+          const mimeType = recorder.mimeType || supportedMimeType || "audio/webm";
+
+          audioChunksRef.current = [];
+          resetRecordingState();
+          stopMediaStream();
+
+          if (!shouldTranscribe) return;
+          if (!chunks.length) {
+            toast({ title: "Nenhum áudio capturado", variant: "destructive" });
+            return;
+          }
+
+          await transcribeRecordedAudio(new Blob(chunks, { type: mimeType }));
+        };
+
+        recorder.start(250);
+      })
+      .catch((error: any) => {
+        setStartingListening(false);
+        setListening(false);
+        stopMediaStream();
+
+        const denied = error?.name === "NotAllowedError" || error?.name === "SecurityError";
         toast({
-          title: "Não foi possível iniciar o microfone",
-          description: "Tente novamente ou verifique a permissão do navegador.",
+          title: denied ? "Permissão do microfone negada" : "Não foi possível acessar o microfone",
           variant: "destructive",
         });
-      }, 4000);
+      });
+  }, [listening, resetRecordingState, startingListening, stopMediaStream, stopRecognition, toast, transcribeRecordedAudio]);
+
+  const sendMessage = useCallback(
+    async (text?: string) => {
+      if (startingListening || listening || transcribingAudio) return;
+
+      const msg = (text ?? input.trim()).trim();
+      if (!msg || loading) return;
+
+      const userMsg: Message = { role: "user", content: msg };
+      const updatedMessages = [...messages, userMsg];
+
+      setMessages(updatedMessages);
+      setInput("");
+      setLoading(true);
 
       try {
-        recognition.start();
-      } catch (_) {
-        stopRecognition();
-        toast({ title: "Falha ao iniciar a gravação", variant: "destructive" });
+        const { data, error } = await supabase.functions.invoke("ceo-ai-assistant", {
+          body: {
+            messages: updatedMessages
+              .filter((m) => m.role === "user" || m.role === "assistant")
+              .map((m) => ({ role: m.role, content: m.content })),
+            user_id: user?.id,
+          },
+        });
+
+        if (error) throw error;
+
+        const reply = data?.reply || "Desculpe, não consegui processar.";
+        const createdEntities = data?.created_entities || [];
+
+        if (createdEntities.length > 0) {
+          toast({ title: `${createdEntities.length} entidade(s) criada(s)`, description: createdEntities.join(", ") });
+        }
+
+        setMessages((prev) => [...prev, { role: "assistant", content: reply, createdEntities }]);
+        tts.speak(reply);
+      } catch (err: any) {
+        const errorMsg = err?.message?.includes("429")
+          ? "Muitas requisições. Aguarde."
+          : err?.message?.includes("402")
+            ? "Créditos esgotados."
+            : "Erro ao processar. Tente novamente.";
+
+        setMessages((prev) => [...prev, { role: "assistant", content: errorMsg }]);
+      } finally {
+        setLoading(false);
       }
-    }).catch((error: any) => {
-      if (recognitionRef.current === recognition) {
-        recognitionRef.current = null;
-      }
-
-      setStartingListening(false);
-      stopMediaStream();
-
-      const denied = error?.name === "NotAllowedError" || error?.name === "SecurityError";
-      toast({
-        title: denied ? "Permissão do microfone negada" : "Não foi possível acessar o microfone",
-        variant: "destructive",
-      });
-    });
-  }, [initializeRecognition, input, startingListening, stopMediaStream, stopRecognition, toast]);
-
-  const sendMessage = useCallback(async (text?: string) => {
-    stopRecognition();
-
-    const previewText = [input.trim(), interimTranscript.trim()].filter(Boolean).join(" ").trim();
-    const msg = (text ?? previewText).trim();
-    if (!msg || loading) return;
-
-    const userMsg: Message = { role: "user", content: msg };
-    const updatedMessages = [...messages, userMsg];
-
-    setMessages(updatedMessages);
-    setInput("");
-    setInterimTranscript("");
-    transcriptBaseRef.current = "";
-    setLoading(true);
-
-    try {
-      const { data, error } = await supabase.functions.invoke("ceo-ai-assistant", {
-        body: {
-          messages: updatedMessages
-            .filter((m) => m.role === "user" || m.role === "assistant")
-            .map((m) => ({ role: m.role, content: m.content })),
-          user_id: user?.id,
-        },
-      });
-
-      if (error) throw error;
-
-      const reply = data?.reply || "Desculpe, não consegui processar.";
-      const createdEntities = data?.created_entities || [];
-
-      if (createdEntities.length > 0) {
-        toast({ title: `${createdEntities.length} entidade(s) criada(s)`, description: createdEntities.join(", ") });
-      }
-
-      setMessages((prev) => [...prev, { role: "assistant", content: reply, createdEntities }]);
-      tts.speak(reply);
-    } catch (err: any) {
-      const errorMsg = err?.message?.includes("429")
-        ? "Muitas requisições. Aguarde."
-        : err?.message?.includes("402")
-          ? "Créditos esgotados."
-          : "Erro ao processar. Tente novamente.";
-
-      setMessages((prev) => [...prev, { role: "assistant", content: errorMsg }]);
-    } finally {
-      setLoading(false);
-    }
-  }, [input, interimTranscript, loading, messages, tts, stopRecognition, toast, user?.id]);
+    },
+    [input, listening, loading, messages, startingListening, toast, transcribingAudio, tts, user?.id],
+  );
 
   const isMicActive = listening || startingListening;
-  const inputValue = [input, listening ? interimTranscript : ""].filter(Boolean).join(input && interimTranscript ? " " : "");
 
   const triggerButton = (
     <Button
@@ -443,10 +430,22 @@ export function VoiceAssistant() {
           <div className="flex items-center gap-1.5">
             {tts.isSpeaking && (
               <>
-                <Button variant="ghost" size="icon" className="h-6 w-6 text-primary hover:text-primary" onClick={tts.togglePause} title={tts.isPaused ? "Continuar" : "Pausar"}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 text-primary hover:text-primary"
+                  onClick={tts.togglePause}
+                  title={tts.isPaused ? "Continuar" : "Pausar"}
+                >
                   {tts.isPaused ? <Play className="h-3 w-3 fill-current" /> : <Pause className="h-3 w-3" />}
                 </Button>
-                <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive hover:text-destructive" onClick={tts.stop} title="Parar áudio">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 text-destructive hover:text-destructive"
+                  onClick={tts.stop}
+                  title="Parar áudio"
+                >
                   <Square className="h-3 w-3 fill-current" />
                 </Button>
               </>
@@ -480,7 +479,9 @@ export function VoiceAssistant() {
                   <Bot className="h-3 w-3 text-destructive-foreground" />
                 </div>
               )}
-              <div className={`max-w-[85%] rounded-lg px-3 py-2 text-xs ${msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-card border border-border text-foreground shadow-sm"}`}>
+              <div
+                className={`max-w-[85%] rounded-lg px-3 py-2 text-xs ${msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-card border border-border text-foreground shadow-sm"}`}
+              >
                 {msg.role === "assistant" ? (
                   <div className="prose prose-xs dark:prose-invert max-w-none text-xs prose-p:my-1 prose-ul:my-0.5 prose-li:my-0 prose-h2:text-xs prose-h3:text-xs prose-code:bg-muted prose-code:px-1 prose-code:rounded prose-code:text-[10px] prose-code:before:content-none prose-code:after:content-none">
                     <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
@@ -491,7 +492,9 @@ export function VoiceAssistant() {
                 {msg.createdEntities && msg.createdEntities.length > 0 && (
                   <div className="mt-1.5 flex flex-wrap gap-1">
                     {msg.createdEntities.map((e, j) => (
-                      <Badge key={j} variant="outline" className="text-[9px]">{e}</Badge>
+                      <Badge key={j} variant="outline" className="text-[9px]">
+                        {e}
+                      </Badge>
                     ))}
                   </div>
                 )}
@@ -503,7 +506,7 @@ export function VoiceAssistant() {
               )}
             </div>
           ))}
-          {loading && (
+          {(loading || transcribingAudio) && (
             <div className="flex gap-2">
               <div className="h-6 w-6 rounded-full bg-destructive flex items-center justify-center shrink-0">
                 <Bot className="h-3 w-3 text-destructive-foreground" />
@@ -516,29 +519,33 @@ export function VoiceAssistant() {
         </div>
 
         <div className="border-t border-border p-3 flex gap-2 items-end">
-            <Button
-              type="button"
-              variant={isMicActive ? "destructive" : "outline"}
-              size="icon"
-              className={`shrink-0 h-9 w-9 ${isMicActive ? "animate-pulse" : ""}`}
-              onClick={handleMicClick}
-              disabled={loading}
+          <Button
+            type="button"
+            variant={isMicActive ? "destructive" : "outline"}
+            size="icon"
+            className={`shrink-0 h-9 w-9 ${isMicActive ? "animate-pulse" : ""}`}
+            onClick={handleMicClick}
+            disabled={loading || transcribingAudio}
             aria-label={isMicActive ? "Parar gravação" : "Iniciar gravação"}
           >
             {isMicActive ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
           </Button>
           <Textarea
-            placeholder={startingListening ? "Ativando microfone..." : listening ? "Ouvindo..." : "Digite ou fale..."}
-            value={inputValue}
-            onChange={(e) => {
-              setInput(e.target.value);
-              transcriptBaseRef.current = e.target.value;
-              setInterimTranscript("");
-            }}
+            placeholder={
+              startingListening
+                ? "Ativando microfone..."
+                : listening
+                  ? "Gravando... clique no microfone para parar"
+                  : transcribingAudio
+                    ? "Transcrevendo áudio..."
+                    : "Digite ou fale..."
+            }
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
-                sendMessage();
+                void sendMessage();
               }
             }}
             className="resize-none min-h-[36px] max-h-[80px] text-xs"
@@ -546,8 +553,8 @@ export function VoiceAssistant() {
           />
           <Button
             type="button"
-            onClick={() => sendMessage()}
-            disabled={loading || !inputValue.trim()}
+            onClick={() => void sendMessage()}
+            disabled={loading || transcribingAudio || isMicActive || !input.trim()}
             size="icon"
             className="shrink-0 h-9 w-9"
             aria-label="Enviar mensagem"
