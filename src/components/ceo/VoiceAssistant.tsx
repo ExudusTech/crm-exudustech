@@ -384,7 +384,7 @@ export function VoiceAssistant() {
       }
 
       setMessages((prev) => [...prev, { role: "assistant", content: reply, createdEntities }]);
-      speak(reply);
+      tts.speak(reply);
     } catch (err: any) {
       const errorMsg = err?.message?.includes("429")
         ? "Muitas requisições. Aguarde."
