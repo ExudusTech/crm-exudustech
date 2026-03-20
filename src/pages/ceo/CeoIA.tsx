@@ -82,7 +82,7 @@ const CeoIA = () => {
 
       const assistantMsg: Message = { role: "assistant", content: reply, createdEntities };
       setMessages(prev => [...prev, assistantMsg]);
-      speak(reply);
+      tts.speak(reply);
     } catch (err: any) {
       const errorMsg = err?.message?.includes("429")
         ? "Muitas requisições. Aguarde um momento e tente novamente."
