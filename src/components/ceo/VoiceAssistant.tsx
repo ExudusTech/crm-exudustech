@@ -179,35 +179,7 @@ export function VoiceAssistant() {
     if (maximized) setPosition({ x: 0, y: 0 });
   }, [maximized]);
 
-  const stopSpeaking = useCallback(() => {
-    window.speechSynthesis?.cancel();
-    setIsSpeaking(false);
-  }, []);
-
-  const speak = useCallback((text: string) => {
-    if (!voiceEnabled || !("speechSynthesis" in window)) return;
-
-    window.speechSynthesis.cancel();
-
-    let clean = text;
-    clean = clean.replace(/#{1,6}\s*/g, "");
-    clean = clean.replace(/\*{1,3}([^*]+)\*{1,3}/g, "$1");
-    clean = clean.replace(/_([^_]+)_/g, "$1");
-    clean = clean.replace(/`([^`]+)`/g, "$1");
-    clean = clean.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1");
-    clean = clean.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE00}-\u{FE0F}\u{1F900}-\u{1F9FF}\u{200D}\u{20E3}\u{E0020}-\u{E007F}]/gu, "");
-    clean = clean.replace(/^[-•*]\s*/gm, "");
-    clean = clean.replace(/^\d+\.\s*/gm, "");
-    clean = clean.replace(/\n+/g, ". ").replace(/\s{2,}/g, " ").replace(/\.\s*\./g, ".").trim();
-
-    const utterance = new SpeechSynthesisUtterance(clean);
-    utterance.lang = "pt-BR";
-    utterance.rate = 1.6;
-    utterance.onstart = () => setIsSpeaking(true);
-    utterance.onend = () => setIsSpeaking(false);
-    utterance.onerror = () => setIsSpeaking(false);
-    window.speechSynthesis.speak(utterance);
-  }, [voiceEnabled]);
+  // TTS is now handled by useTTS hook
 
   const initializeRecognition = useCallback(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
