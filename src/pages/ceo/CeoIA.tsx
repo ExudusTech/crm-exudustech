@@ -39,7 +39,7 @@ const CeoIA = () => {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
+  const tts = useTTS({ enabled: voiceEnabled });
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
