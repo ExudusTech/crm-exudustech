@@ -33,6 +33,62 @@ async function callGoogleApi(supabaseUrl: string, supabaseKey: string, userId: s
   return res.json();
 }
 
+async function buildSpokenReply(
+  lovableApiKey: string,
+  visualReply: string,
+  currentDateTime: string,
+  brasiliaISO: string,
+) {
+  try {
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${lovableApiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-lite",
+        messages: [
+          {
+            role: "system",
+            content: `Você converte respostas visuais da EVA em fala natural para TTS.
+
+Reescreva o conteúdo abaixo como se a EVA estivesse CONVERSANDO com PH, não lendo texto.
+
+REGRAS OBRIGATÓRIAS:
+- Saída em português do Brasil, sem markdown, sem listas, sem tabelas.
+- Máximo de 90 palavras, salvo se faltar contexto essencial.
+- Resuma, interprete e fale como secretária executiva.
+- NUNCA leia datas/horários em formato bruto. Converta para fala natural, como "segunda, vinte e três de março, das oito e meia às dez".
+- NUNCA leia pipes, barras, dois pontos técnicos, UUIDs, nomes de campos ou cabeçalhos de tabela.
+- Se houver agenda/eventos, destaque só o que mais importa e diga que o restante está na tela.
+- Use pausas naturais com vírgulas e ponto final.
+- Quando apropriado, comece com algo como "PH, deixa eu te resumir" ou "Olha, encontrei aqui".
+
+Agora em Brasília: ${currentDateTime}
+ISO de referência: ${brasiliaISO}`,
+          },
+          {
+            role: "user",
+            content: visualReply,
+          },
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`spoken reply ai error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const spokenReply = data.choices?.[0]?.message?.content?.trim();
+    return spokenReply || visualReply;
+  } catch (error) {
+    console.error("Failed to build spoken reply:", error);
+    return visualReply;
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -664,17 +720,23 @@ ${contextStr}`;
 
       const followUpData = await followUp.json();
       const reply = followUpData.choices?.[0]?.message?.content || "Operação executada.";
+      const spokenReply = await buildSpokenReply(LOVABLE_API_KEY, reply, currentDateTime, brasiliaISO);
 
       return new Response(JSON.stringify({
         reply,
+        spoken_reply: spokenReply,
         created_entities: createdEntities,
         tool_calls_executed: choice.message.tool_calls.length,
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // No tool calls - regular response
+    const reply = choice?.message?.content || "Desculpe, não consegui processar.";
+    const spokenReply = await buildSpokenReply(LOVABLE_API_KEY, reply, currentDateTime, brasiliaISO);
+
     return new Response(JSON.stringify({
-      reply: choice?.message?.content || "Desculpe, não consegui processar.",
+      reply,
+      spoken_reply: spokenReply,
       created_entities: [],
       tool_calls_executed: 0,
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
