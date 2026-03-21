@@ -573,7 +573,10 @@ export function VoiceAssistant() {
       <div
         ref={panelRef}
         style={panelStyle}
-        className={`bg-background border border-border shadow-2xl flex flex-col overflow-hidden ${maximized ? "" : "rounded-xl"}`}
+        className={`bg-background border shadow-2xl flex flex-col overflow-hidden ${maximized ? "" : "rounded-xl"} ${dragOver ? "border-primary border-2" : "border-border"}`}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
       >
         <div
           className={`flex items-center justify-between px-3 py-2 border-b border-border bg-muted/30 select-none ${maximized ? "" : "cursor-grab active:cursor-grabbing"}`}
