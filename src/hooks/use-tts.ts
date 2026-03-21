@@ -1,121 +1,162 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { cleanForSpeech, splitIntoSpeechChunks } from "@/lib/ttsSpeechFormat";
+import { supabase } from "@/integrations/supabase/client";
 
 export interface UseTTSOptions {
   enabled: boolean;
-  rate?: number;
   lang?: string;
 }
 
-export function useTTS({ enabled, rate = 1.22, lang = "pt-BR" }: UseTTSOptions) {
+export function useTTS({ enabled, lang = "pt-BR" }: UseTTSOptions) {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
-  const utteranceIndexRef = useRef(0);
-  const sentencesRef = useRef<string[]>([]);
-  const cancelledRef = useRef(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const objectUrlRef = useRef<string | null>(null);
+  const playbackTokenRef = useRef(0);
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      window.speechSynthesis?.cancel();
-    };
+  const cleanupAudio = useCallback(() => {
+    const audio = audioRef.current;
+
+    if (audio) {
+      audio.pause();
+      audio.onplay = null;
+      audio.onpause = null;
+      audio.onended = null;
+      audio.onerror = null;
+      audio.src = "";
+    }
+
+    audioRef.current = null;
+
+    if (objectUrlRef.current) {
+      URL.revokeObjectURL(objectUrlRef.current);
+      objectUrlRef.current = null;
+    }
   }, []);
 
-  const speakNextSentence = useCallback(() => {
-    if (cancelledRef.current) return;
-
-    const idx = utteranceIndexRef.current;
-    const sentences = sentencesRef.current;
-
-    if (idx >= sentences.length) {
-      setIsSpeaking(false);
-      setIsPaused(false);
-      return;
-    }
-
-    const utterance = new SpeechSynthesisUtterance(sentences[idx]);
-    utterance.lang = lang;
-    utterance.rate = rate;
-    utterance.pitch = 0.9;
-    
-    // Try to find a good Portuguese voice
-    const voices = window.speechSynthesis?.getVoices() || [];
-    // Prefer female Portuguese voices for EVA persona
-    const femaleKeywords = ["female", "feminino", "Francisca", "Raquel", "Vitória", "Thalita", "Leila", "Fernanda", "Maria", "Ana"];
-    const ptVoices = voices.filter(v => v.lang.startsWith("pt"));
-    const femaleVoice = ptVoices.find(v => 
-      femaleKeywords.some(k => v.name.toLowerCase().includes(k.toLowerCase()))
-    ) || ptVoices.find(v => 
-      (v.name.includes("Google") || v.name.includes("Microsoft") || v.name.includes("Natural"))
-    ) || ptVoices[0];
-    
-    if (femaleVoice) {
-      utterance.voice = femaleVoice;
-    }
-
-    utterance.onstart = () => {
-      setIsSpeaking(true);
-      setIsPaused(false);
-    };
-
-    utterance.onend = () => {
-      if (cancelledRef.current) return;
-      utteranceIndexRef.current = idx + 1;
-      const pauseMs = /[!?]$/.test(sentences[idx]) ? 420 : /,$/.test(sentences[idx]) ? 260 : 320;
-      setTimeout(() => speakNextSentence(), pauseMs);
-    };
-
-    utterance.onerror = (e) => {
-      if (e.error === "interrupted" || e.error === "canceled") return;
-      setIsSpeaking(false);
-      setIsPaused(false);
-    };
-
-    window.speechSynthesis.speak(utterance);
-  }, [lang, rate]);
-
-  const speak = useCallback((text: string) => {
-    if (!enabled || !("speechSynthesis" in window)) return;
-
-    // Cancel any ongoing speech
-    window.speechSynthesis.cancel();
-    cancelledRef.current = false;
-
-    const cleaned = cleanForSpeech(text);
-    const sentences = splitIntoSpeechChunks(cleaned);
-    
-    sentencesRef.current = sentences;
-    utteranceIndexRef.current = 0;
-
-    // Ensure voices are loaded
-    const voices = window.speechSynthesis.getVoices();
-    if (voices.length === 0) {
-      window.speechSynthesis.onvoiceschanged = () => {
-        speakNextSentence();
-      };
-    } else {
-      speakNextSentence();
-    }
-  }, [enabled, speakNextSentence]);
-
-  const stop = useCallback(() => {
-    cancelledRef.current = true;
-    window.speechSynthesis?.cancel();
+  const resetState = useCallback(() => {
     setIsSpeaking(false);
     setIsPaused(false);
   }, []);
 
+  const stopCurrentPlayback = useCallback(() => {
+    playbackTokenRef.current += 1;
+    cleanupAudio();
+    resetState();
+  }, [cleanupAudio, resetState]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      stopCurrentPlayback();
+    };
+  }, [stopCurrentPlayback]);
+
+  useEffect(() => {
+    if (!enabled) {
+      stopCurrentPlayback();
+    }
+  }, [enabled, stopCurrentPlayback]);
+
+  const speak = useCallback((text: string) => {
+    if (!enabled) return;
+
+    const cleaned = splitIntoSpeechChunks(cleanForSpeech(text)).join(" ").trim();
+    if (!cleaned) return;
+
+    stopCurrentPlayback();
+    const currentToken = playbackTokenRef.current;
+
+    void (async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        const authToken = session?.access_token || import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+        const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/tts-speak`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+            Authorization: `Bearer ${authToken}`,
+          },
+          body: JSON.stringify({
+            text: cleaned,
+            lang,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`TTS request failed: ${response.status}`);
+        }
+
+        const audioBlob = await response.blob();
+        if (currentToken !== playbackTokenRef.current) return;
+
+        cleanupAudio();
+
+        const audioUrl = URL.createObjectURL(audioBlob);
+        objectUrlRef.current = audioUrl;
+
+        const audio = new Audio(audioUrl);
+        audio.preload = "auto";
+
+        audio.onplay = () => {
+          setIsSpeaking(true);
+          setIsPaused(false);
+        };
+
+        audio.onpause = () => {
+          if (!audio.ended && audio.currentTime > 0) {
+            setIsPaused(true);
+          }
+        };
+
+        audio.onended = () => {
+          cleanupAudio();
+          resetState();
+        };
+
+        audio.onerror = () => {
+          cleanupAudio();
+          resetState();
+        };
+
+        audioRef.current = audio;
+        await audio.play();
+      } catch (error) {
+        console.error("[useTTS] playback error", error);
+        cleanupAudio();
+        resetState();
+      }
+    })();
+  }, [cleanupAudio, enabled, lang, resetState, stopCurrentPlayback]);
+
+  const stop = useCallback(() => {
+    stopCurrentPlayback();
+  }, [stopCurrentPlayback]);
+
   const pause = useCallback(() => {
     if (!isSpeaking || isPaused) return;
-    window.speechSynthesis?.pause();
+    audioRef.current?.pause();
     setIsPaused(true);
   }, [isSpeaking, isPaused]);
 
   const resume = useCallback(() => {
     if (!isPaused) return;
-    window.speechSynthesis?.resume();
-    setIsPaused(false);
-  }, [isPaused]);
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    void audio.play().then(() => {
+      setIsPaused(false);
+      setIsSpeaking(true);
+    }).catch((error) => {
+      console.error("[useTTS] resume error", error);
+      cleanupAudio();
+      resetState();
+    });
+  }, [cleanupAudio, isPaused, resetState]);
 
   const togglePause = useCallback(() => {
     if (isPaused) {
