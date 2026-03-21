@@ -68,6 +68,7 @@ export function VoiceAssistant() {
   const [loading, setLoading] = useState(false);
   const [listening, setListening] = useState(false);
   const [startingListening, setStartingListening] = useState(false);
+  const [stoppingListening, setStoppingListening] = useState(false);
   const [transcribingAudio, setTranscribingAudio] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -75,6 +76,7 @@ export function VoiceAssistant() {
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const shouldTranscribeOnStopRef = useRef(true);
+  const stopFallbackTimeoutRef = useRef<number | null>(null);
 
   const [position, setPosition] = useState<{ x: number; y: number }>({
     x: typeof window !== "undefined" ? window.innerWidth - 460 : 500,
@@ -94,17 +96,31 @@ export function VoiceAssistant() {
     mediaStreamRef.current = null;
   }, []);
 
+  const clearStopFallbackTimeout = useCallback(() => {
+    if (stopFallbackTimeoutRef.current !== null) {
+      window.clearTimeout(stopFallbackTimeoutRef.current);
+      stopFallbackTimeoutRef.current = null;
+    }
+  }, []);
+
   const resetRecordingState = useCallback(() => {
     setListening(false);
     setStartingListening(false);
+    setStoppingListening(false);
     mediaRecorderRef.current = null;
-  }, []);
+    clearStopFallbackTimeout();
+  }, [clearStopFallbackTimeout]);
 
   const transcribeRecordedAudio = useCallback(
     async (audioBlob: Blob) => {
       setTranscribingAudio(true);
 
       try {
+        console.info("[VoiceAssistant] Iniciando transcrição", {
+          size: audioBlob.size,
+          type: audioBlob.type,
+        });
+
         const base64Audio = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
 
@@ -147,6 +163,7 @@ export function VoiceAssistant() {
 
         setInput((prev) => [prev.trim(), transcript].filter(Boolean).join(prev.trim() ? " " : ""));
       } catch (err: any) {
+        console.error("[VoiceAssistant] Falha na transcrição", err);
         toast({
           title: "Erro ao transcrever áudio",
           description: err?.message || "Tente novamente.",
@@ -172,15 +189,23 @@ export function VoiceAssistant() {
 
       setListening(false);
       setStartingListening(false);
+      setStoppingListening(true);
 
       try {
+        recorder.requestData?.();
         recorder.stop();
+        clearStopFallbackTimeout();
+        stopFallbackTimeoutRef.current = window.setTimeout(() => {
+          console.warn("[VoiceAssistant] recorder.onstop não disparou a tempo, limpando estado manualmente");
+          resetRecordingState();
+          stopMediaStream();
+        }, 2000);
       } catch {
         resetRecordingState();
         stopMediaStream();
       }
     },
-    [resetRecordingState, stopMediaStream],
+    [clearStopFallbackTimeout, resetRecordingState, stopMediaStream],
   );
 
   useEffect(() => {
@@ -248,7 +273,7 @@ export function VoiceAssistant() {
   }, [dragging]);
 
   const handleMicClick = useCallback(() => {
-    if (startingListening || listening) {
+    if (startingListening || listening || stoppingListening) {
       stopRecognition();
       return;
     }
@@ -259,6 +284,7 @@ export function VoiceAssistant() {
     }
 
     setStartingListening(true);
+    setStoppingListening(false);
 
     navigator.mediaDevices
       .getUserMedia({
@@ -269,6 +295,7 @@ export function VoiceAssistant() {
         },
       })
       .then((stream) => {
+        console.info("[VoiceAssistant] Microfone autorizado");
         mediaStreamRef.current = stream;
 
         const supportedMimeType = [
@@ -287,6 +314,7 @@ export function VoiceAssistant() {
         mediaRecorderRef.current = recorder;
 
         recorder.onstart = () => {
+          console.info("[VoiceAssistant] Gravação iniciada", { mimeType: recorder.mimeType || supportedMimeType || "default" });
           setStartingListening(false);
           setListening(true);
         };
@@ -295,15 +323,23 @@ export function VoiceAssistant() {
           if (event.data.size > 0) {
             audioChunksRef.current.push(event.data);
           }
+
+          console.info("[VoiceAssistant] Chunk de áudio recebido", {
+            size: event.data.size,
+            type: event.data.type,
+            totalChunks: audioChunksRef.current.length,
+          });
         };
 
-        recorder.onerror = () => {
+        recorder.onerror = (event) => {
+          console.error("[VoiceAssistant] Erro do MediaRecorder", event);
           resetRecordingState();
           stopMediaStream();
           toast({ title: "Falha ao gravar áudio", variant: "destructive" });
         };
 
         recorder.onstop = async () => {
+          clearStopFallbackTimeout();
           const shouldTranscribe = shouldTranscribeOnStopRef.current;
           const chunks = audioChunksRef.current;
           const mimeType = recorder.mimeType || supportedMimeType || "audio/webm";
@@ -312,29 +348,48 @@ export function VoiceAssistant() {
           resetRecordingState();
           stopMediaStream();
 
+          const audioBlob = new Blob(chunks, { type: mimeType });
+
+          console.info("[VoiceAssistant] Gravação finalizada", {
+            shouldTranscribe,
+            chunks: chunks.length,
+            size: audioBlob.size,
+            type: mimeType,
+          });
+
           if (!shouldTranscribe) return;
-          if (!chunks.length) {
+          if (!chunks.length || audioBlob.size === 0) {
             toast({ title: "Nenhum áudio capturado", variant: "destructive" });
             return;
           }
 
-          await transcribeRecordedAudio(new Blob(chunks, { type: mimeType }));
+          await transcribeRecordedAudio(audioBlob);
         };
 
-        recorder.start(250);
+        recorder.start();
       })
       .catch((error: any) => {
+        console.error("[VoiceAssistant] Falha ao acessar microfone", error);
         setStartingListening(false);
         setListening(false);
+        setStoppingListening(false);
         stopMediaStream();
 
         const denied = error?.name === "NotAllowedError" || error?.name === "SecurityError";
+        const unavailable = error?.name === "NotFoundError" || error?.name === "DevicesNotFoundError";
+        const busy = error?.name === "NotReadableError" || error?.name === "TrackStartError";
         toast({
-          title: denied ? "Permissão do microfone negada" : "Não foi possível acessar o microfone",
+          title: denied
+            ? "Permissão do microfone negada"
+            : unavailable
+              ? "Nenhum microfone foi encontrado"
+              : busy
+                ? "O microfone já está em uso por outro aplicativo"
+                : "Não foi possível acessar o microfone",
           variant: "destructive",
         });
       });
-  }, [listening, resetRecordingState, startingListening, stopMediaStream, stopRecognition, toast, transcribeRecordedAudio]);
+  }, [clearStopFallbackTimeout, listening, resetRecordingState, startingListening, stopMediaStream, stopRecognition, stoppingListening, toast, transcribeRecordedAudio]);
 
   const sendMessage = useCallback(
     async (text?: string) => {
@@ -386,7 +441,7 @@ export function VoiceAssistant() {
     [input, listening, loading, messages, startingListening, toast, transcribingAudio, tts, user?.id],
   );
 
-  const isMicActive = listening || startingListening;
+  const isMicActive = listening || startingListening || stoppingListening;
 
   const triggerButton = (
     <Button
@@ -536,6 +591,8 @@ export function VoiceAssistant() {
                 ? "Ativando microfone..."
                 : listening
                   ? "Gravando... clique no microfone para parar"
+                  : stoppingListening
+                    ? "Finalizando gravação..."
                   : transcribingAudio
                     ? "Transcrevendo áudio..."
                     : "Digite ou fale..."
