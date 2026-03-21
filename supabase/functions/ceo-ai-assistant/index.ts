@@ -709,6 +709,75 @@ ${contextStr}`;
               result = await callGoogleApi(supabaseUrl, supabaseKey, user_id, "drive", "list_folders", args);
               break;
             }
+            // Search contacts across all modules
+            case "search_contacts": {
+              try {
+                const searchName = args.name;
+                const contacts: Array<{ name: string; phone: string | null; source: string; id: string }> = [];
+
+                // Search in leads (CRM)
+                const { data: leads } = await supabase
+                  .from("leads")
+                  .select("id, name, phone, phones, email")
+                  .ilike("name", `%${searchName}%`)
+                  .limit(10);
+
+                if (leads) {
+                  for (const l of leads) {
+                    const phones = [l.phone, ...(l.phones || [])].filter(Boolean);
+                    if (phones.length > 0) {
+                      contacts.push({ name: l.name, phone: phones[0], source: "CRM (lead)", id: l.id });
+                    } else {
+                      contacts.push({ name: l.name, phone: null, source: "CRM (lead, sem telefone)", id: l.id });
+                    }
+                  }
+                }
+
+                // Search in stakeholders (CEO)
+                const { data: stkh } = await supabase
+                  .from("stakeholders")
+                  .select("id, name, phone, email, role_title, organization_id")
+                  .ilike("name", `%${searchName}%`)
+                  .limit(10);
+
+                if (stkh) {
+                  for (const s of stkh) {
+                    contacts.push({ name: s.name, phone: s.phone || null, source: "Stakeholder", id: s.id });
+                  }
+                }
+
+                // Search in whatsapp_messages by distinct phones with matching lead names
+                if (contacts.length === 0) {
+                  const { data: waMsgs } = await supabase
+                    .from("whatsapp_messages")
+                    .select("phone, lead_id")
+                    .not("phone", "is", null)
+                    .limit(100);
+
+                  if (waMsgs) {
+                    const uniquePhones = [...new Set(waMsgs.map((m: any) => m.phone).filter(Boolean))];
+                    contacts.push(...uniquePhones.slice(0, 5).map(p => ({
+                      name: "Contato WhatsApp",
+                      phone: p,
+                      source: "WhatsApp (histórico)",
+                      id: "",
+                    })));
+                  }
+                }
+
+                result = {
+                  success: true,
+                  contacts,
+                  total: contacts.length,
+                  note: contacts.length === 0
+                    ? `Nenhum contato encontrado com nome "${searchName}". O CEO pode informar o telefone diretamente.`
+                    : `Encontrados ${contacts.length} contatos. Use o telefone para enviar WhatsApp.`,
+                };
+              } catch (searchErr: any) {
+                result = { success: false, error: searchErr.message };
+              }
+              break;
+            }
             // WhatsApp via CRM - actually send the message
             case "send_whatsapp": {
               try {
