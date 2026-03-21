@@ -743,6 +743,72 @@ ${contextStr}`;
               }
               break;
             }
+            // Read WhatsApp messages from CRM
+            case "read_whatsapp_messages": {
+              try {
+                let query = supabase
+                  .from("whatsapp_messages")
+                  .select("id, lead_id, phone, message, direction, timestamp, created_at")
+                  .order("created_at", { ascending: false })
+                  .limit(args.limit || 20);
+
+                if (args.direction) query = query.eq("direction", args.direction);
+
+                // If lead_name provided, first find matching leads
+                if (args.lead_name) {
+                  const { data: leads } = await supabase
+                    .from("leads")
+                    .select("id, name, phone, phones")
+                    .ilike("name", `%${args.lead_name}%`)
+                    .limit(5);
+                  
+                  if (leads && leads.length > 0) {
+                    const leadIds = leads.map((l: any) => l.id);
+                    query = query.in("lead_id", leadIds);
+                    result = { leads_found: leads.map((l: any) => ({ name: l.name, phone: l.phone })) };
+                  } else {
+                    result = { success: true, messages: [], note: `Nenhum lead encontrado com nome "${args.lead_name}"` };
+                    break;
+                  }
+                }
+
+                if (args.phone) {
+                  const digits = args.phone.replace(/\D/g, "");
+                  const suffix = digits.slice(-8);
+                  query = query.ilike("phone", `%${suffix}%`);
+                }
+
+                const { data: msgs, error: msgErr } = await query;
+                if (msgErr) {
+                  result = { success: false, error: msgErr.message };
+                } else {
+                  // Enrich with lead names
+                  const leadIds = [...new Set((msgs || []).map((m: any) => m.lead_id).filter(Boolean))];
+                  let leadMap: Record<string, string> = {};
+                  if (leadIds.length > 0) {
+                    const { data: leadNames } = await supabase
+                      .from("leads")
+                      .select("id, name")
+                      .in("id", leadIds);
+                    if (leadNames) leadMap = Object.fromEntries(leadNames.map((l: any) => [l.id, l.name]));
+                  }
+
+                  result = {
+                    success: true,
+                    messages: (msgs || []).map((m: any) => ({
+                      contact: leadMap[m.lead_id] || m.phone,
+                      phone: m.phone,
+                      message: m.message,
+                      direction: m.direction === "inbound" ? "recebida" : "enviada",
+                      timestamp: m.timestamp || m.created_at,
+                    })),
+                  };
+                }
+              } catch (readErr: any) {
+                result = { success: false, error: readErr.message };
+              }
+              break;
+            }
           }
         } catch (e: any) {
           result = { success: false, error: e.message };
