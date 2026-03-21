@@ -773,7 +773,7 @@ ${contextStr}`;
                   contacts,
                   total: contacts.length,
                   note: contacts.length === 0
-                    ? `Nenhum contato encontrado com nome "${searchName}". O CEO pode informar o telefone diretamente.`
+                    ? `Nenhum contato encontrado com nome "${searchName}". OFEREÇA cadastrar como stakeholder — peça o telefone ao CEO e use create_stakeholder para registrar antes de enviar a mensagem.`
                     : `Encontrados ${contacts.length} contatos. Use o telefone para enviar WhatsApp.`,
                 };
               } catch (searchErr: any) {
