@@ -189,6 +189,7 @@ ISO para referência em tool calls: ${brasiliaISO}
 REGRA CRÍTICA DE PROATIVIDADE:
 - Quando o CEO mencionar reuniões, compromissos, agenda — CONSULTE AUTOMATICAMENTE o Google Calendar ANTES de responder.
 - Quando pedir email sobre algo da agenda — PRIMEIRO consulte a agenda, DEPOIS prepare o email.
+- Quando o CEO pedir para enviar WhatsApp e mencionar apenas um NOME (sem telefone), use OBRIGATORIAMENTE a tool search_contacts para buscar o contato antes. Busque em leads, stakeholders e histórico de mensagens.
 - Seja PROATIVA: use as ferramentas para buscar informações antes de perguntar ao CEO.
 - O CEO espera que você aja como uma assistente de verdade: pesquise, analise e apresente.
 
@@ -496,12 +497,27 @@ ${contextStr}`;
           },
         },
       },
+      // Contact search across CRM and CEO modules
+      {
+        type: "function",
+        function: {
+          name: "search_contacts",
+          description: "Busca contatos por nome em todas as bases: leads (CRM), stakeholders (CEO) e whatsapp_messages. Use SEMPRE antes de enviar WhatsApp quando não tiver o telefone.",
+          parameters: {
+            type: "object",
+            properties: {
+              name: { type: "string", description: "Nome ou parte do nome do contato" },
+            },
+            required: ["name"],
+          },
+        },
+      },
       // Communication (CRM bridge)
       {
         type: "function",
         function: {
           name: "send_whatsapp",
-          description: "Envia mensagem WhatsApp via módulo CRM. SEMPRE peça confirmação antes.",
+          description: "Envia mensagem WhatsApp via módulo CRM. SEMPRE peça confirmação antes. Se não tiver o telefone, use search_contacts primeiro.",
           parameters: {
             type: "object",
             properties: {
@@ -692,6 +708,75 @@ ${contextStr}`;
             case "drive_list_folders": {
               if (!user_id) { result = { success: false, error: "user_id required" }; break; }
               result = await callGoogleApi(supabaseUrl, supabaseKey, user_id, "drive", "list_folders", args);
+              break;
+            }
+            // Search contacts across all modules
+            case "search_contacts": {
+              try {
+                const searchName = args.name;
+                const contacts: Array<{ name: string; phone: string | null; source: string; id: string }> = [];
+
+                // Search in leads (CRM)
+                const { data: leads } = await supabase
+                  .from("leads")
+                  .select("id, name, phone, phones, email")
+                  .ilike("name", `%${searchName}%`)
+                  .limit(10);
+
+                if (leads) {
+                  for (const l of leads) {
+                    const phones = [l.phone, ...(l.phones || [])].filter(Boolean);
+                    if (phones.length > 0) {
+                      contacts.push({ name: l.name, phone: phones[0], source: "CRM (lead)", id: l.id });
+                    } else {
+                      contacts.push({ name: l.name, phone: null, source: "CRM (lead, sem telefone)", id: l.id });
+                    }
+                  }
+                }
+
+                // Search in stakeholders (CEO)
+                const { data: stkh } = await supabase
+                  .from("stakeholders")
+                  .select("id, name, phone, email, role_title, organization_id")
+                  .ilike("name", `%${searchName}%`)
+                  .limit(10);
+
+                if (stkh) {
+                  for (const s of stkh) {
+                    contacts.push({ name: s.name, phone: s.phone || null, source: "Stakeholder", id: s.id });
+                  }
+                }
+
+                // Search in whatsapp_messages by distinct phones with matching lead names
+                if (contacts.length === 0) {
+                  const { data: waMsgs } = await supabase
+                    .from("whatsapp_messages")
+                    .select("phone, lead_id")
+                    .not("phone", "is", null)
+                    .limit(100);
+
+                  if (waMsgs) {
+                    const uniquePhones = [...new Set(waMsgs.map((m: any) => m.phone).filter(Boolean))];
+                    contacts.push(...uniquePhones.slice(0, 5).map(p => ({
+                      name: "Contato WhatsApp",
+                      phone: p,
+                      source: "WhatsApp (histórico)",
+                      id: "",
+                    })));
+                  }
+                }
+
+                result = {
+                  success: true,
+                  contacts,
+                  total: contacts.length,
+                  note: contacts.length === 0
+                    ? `Nenhum contato encontrado com nome "${searchName}". O CEO pode informar o telefone diretamente.`
+                    : `Encontrados ${contacts.length} contatos. Use o telefone para enviar WhatsApp.`,
+                };
+              } catch (searchErr: any) {
+                result = { success: false, error: searchErr.message };
+              }
               break;
             }
             // WhatsApp via CRM - actually send the message
