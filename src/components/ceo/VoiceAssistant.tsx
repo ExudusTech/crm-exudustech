@@ -586,7 +586,7 @@ export function VoiceAssistant() {
         setLoading(false);
       }
     },
-    [input, listening, loading, messages, pendingImages, startingListening, toast, transcribingAudio, tts, user?.id],
+    [input, listening, loading, messages, pendingImages, saveMessage, startingListening, toast, transcribingAudio, tts, user?.id],
   );
 
   const isMicActive = listening || startingListening || stoppingListening;
