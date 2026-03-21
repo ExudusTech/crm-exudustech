@@ -95,6 +95,51 @@ export function VoiceAssistant() {
   const stopRecognitionRef = useRef<(discardAudio?: boolean) => void>(() => undefined);
   const stopTtsRef = useRef<() => void>(() => undefined);
 
+  // Load chat history from database
+  useEffect(() => {
+    if (!user?.id || historyLoaded) return;
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from("ceo_chat_messages")
+          .select("role, content, images, created_entities, created_at")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: true })
+          .limit(200);
+        if (error) throw error;
+        if (data && data.length > 0) {
+          const loaded: Message[] = data.map((m: any) => ({
+            role: m.role as "user" | "assistant",
+            content: m.content,
+            images: m.images || undefined,
+            createdEntities: m.created_entities || undefined,
+          }));
+          setMessages([WELCOME_MESSAGE, ...loaded]);
+        }
+      } catch (e) {
+        console.error("Failed to load chat history:", e);
+      } finally {
+        setHistoryLoaded(true);
+      }
+    })();
+  }, [user?.id, historyLoaded]);
+
+  // Save message to database
+  const saveMessage = useCallback(async (msg: Message) => {
+    if (!user?.id) return;
+    try {
+      await supabase.from("ceo_chat_messages").insert({
+        user_id: user.id,
+        role: msg.role,
+        content: msg.content,
+        images: msg.images && msg.images.length > 0 ? msg.images : null,
+        created_entities: msg.createdEntities && msg.createdEntities.length > 0 ? msg.createdEntities : null,
+      } as any);
+    } catch (e) {
+      console.error("Failed to save chat message:", e);
+    }
+  }, [user?.id]);
+
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages]);
