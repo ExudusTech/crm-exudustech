@@ -409,18 +409,51 @@ export function VoiceAssistant() {
       });
   }, [clearStopFallbackTimeout, listening, resetRecordingState, startingListening, stopMediaStream, stopRecognition, stoppingListening, toast, transcribeRecordedAudio]);
 
+  const handleImageUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+    
+    Array.from(files).forEach((file) => {
+      if (!file.type.startsWith("image/")) return;
+      if (file.size > 10 * 1024 * 1024) {
+        toast({ title: "Imagem muito grande (máx 10MB)", variant: "destructive" });
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (typeof reader.result === "string") {
+          setPendingImages((prev) => [...prev, reader.result as string]);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+    
+    // Reset input so same file can be selected again
+    e.target.value = "";
+  }, [toast]);
+
+  const removePendingImage = useCallback((index: number) => {
+    setPendingImages((prev) => prev.filter((_, i) => i !== index));
+  }, []);
+
   const sendMessage = useCallback(
     async (text?: string) => {
       if (startingListening || listening || transcribingAudio) return;
 
       const msg = (text ?? input.trim()).trim();
-      if (!msg || loading) return;
+      if ((!msg && pendingImages.length === 0) || loading) return;
 
-      const userMsg: Message = { role: "user", content: msg };
+      const userMsg: Message = { 
+        role: "user", 
+        content: msg || "(imagem enviada)", 
+        images: pendingImages.length > 0 ? [...pendingImages] : undefined,
+      };
       const updatedMessages = [...messages, userMsg];
 
       setMessages(updatedMessages);
       setInput("");
+      const imagesToSend = [...pendingImages];
+      setPendingImages([]);
       setLoading(true);
 
       try {
@@ -430,6 +463,7 @@ export function VoiceAssistant() {
               .filter((m) => m.role === "user" || m.role === "assistant")
               .map((m) => ({ role: m.role, content: m.content })),
             user_id: user?.id,
+            images: imagesToSend.length > 0 ? imagesToSend : undefined,
           },
         });
 
@@ -456,7 +490,7 @@ export function VoiceAssistant() {
         setLoading(false);
       }
     },
-    [input, listening, loading, messages, startingListening, toast, transcribingAudio, tts, user?.id],
+    [input, listening, loading, messages, pendingImages, startingListening, toast, transcribingAudio, tts, user?.id],
   );
 
   const isMicActive = listening || startingListening || stoppingListening;
