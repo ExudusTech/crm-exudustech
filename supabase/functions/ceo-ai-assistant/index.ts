@@ -675,20 +675,55 @@ ${contextStr}`;
               result = await callGoogleApi(supabaseUrl, supabaseKey, user_id, "drive", "list_folders", args);
               break;
             }
-            // WhatsApp via CRM
+            // WhatsApp via CRM - actually send the message
             case "send_whatsapp": {
-              const { error } = await supabase.from("communication_requests").insert({
-                channel: "whatsapp",
-                source_module: "ceo",
-                target_name: args.target_name,
-                target_phone: args.target_phone,
-                message_body: args.message_body,
-                related_entity_type: args.related_entity_type,
-                related_entity_id: args.related_entity_id,
-                requested_by: "ia_assistant",
-              });
-              result = error ? { success: false, error: error.message } : { success: true };
-              if (!error) createdEntities.push(`WhatsApp para ${args.target_name || args.target_phone}`);
+              try {
+                const sendRes = await fetch(`${supabaseUrl}/functions/v1/send-whatsapp-message`, {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${supabaseKey}`,
+                  },
+                  body: JSON.stringify({
+                    phone: args.target_phone,
+                    message: args.message_body,
+                  }),
+                });
+                const sendData = await sendRes.json();
+                
+                if (!sendRes.ok || sendData.error) {
+                  result = { success: false, error: sendData.error || `Erro HTTP ${sendRes.status}` };
+                } else {
+                  result = { success: true, message: "Mensagem enviada com sucesso" };
+                  createdEntities.push(`WhatsApp enviado para ${args.target_name || args.target_phone}`);
+                }
+
+                await supabase.from("communication_requests").insert({
+                  channel: "whatsapp",
+                  source_module: "ceo",
+                  target_name: args.target_name,
+                  target_phone: args.target_phone,
+                  message_body: args.message_body,
+                  related_entity_type: args.related_entity_type,
+                  related_entity_id: args.related_entity_id,
+                  requested_by: "ia_assistant",
+                  status: result.success ? "executed" : "failed",
+                  executed_at: result.success ? new Date().toISOString() : null,
+                  execution_result: JSON.stringify(sendData),
+                });
+              } catch (sendErr: any) {
+                result = { success: false, error: sendErr.message };
+                await supabase.from("communication_requests").insert({
+                  channel: "whatsapp",
+                  source_module: "ceo",
+                  target_name: args.target_name,
+                  target_phone: args.target_phone,
+                  message_body: args.message_body,
+                  requested_by: "ia_assistant",
+                  status: "failed",
+                  execution_result: sendErr.message,
+                });
+              }
               break;
             }
           }
