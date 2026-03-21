@@ -409,12 +409,12 @@ export function VoiceAssistant() {
       });
   }, [clearStopFallbackTimeout, listening, resetRecordingState, startingListening, stopMediaStream, stopRecognition, stoppingListening, toast, transcribeRecordedAudio]);
 
-  const handleImageUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
-    
+  const processFiles = useCallback((files: FileList | File[]) => {
     Array.from(files).forEach((file) => {
-      if (!file.type.startsWith("image/")) return;
+      if (!file.type.startsWith("image/")) {
+        toast({ title: `Formato não suportado: ${file.type || file.name}`, description: "Envie apenas imagens (PNG, JPG, etc.)", variant: "destructive" });
+        return;
+      }
       if (file.size > 10 * 1024 * 1024) {
         toast({ title: "Imagem muito grande (máx 10MB)", variant: "destructive" });
         return;
@@ -427,10 +427,54 @@ export function VoiceAssistant() {
       };
       reader.readAsDataURL(file);
     });
-    
-    // Reset input so same file can be selected again
-    e.target.value = "";
   }, [toast]);
+
+  const handleImageUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+    processFiles(files);
+    e.target.value = "";
+  }, [processFiles]);
+
+  const handlePaste = useCallback((e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    const imageFiles: File[] = [];
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.startsWith("image/")) {
+        const file = items[i].getAsFile();
+        if (file) imageFiles.push(file);
+      }
+    }
+    if (imageFiles.length > 0) {
+      e.preventDefault();
+      processFiles(imageFiles);
+    }
+  }, [processFiles]);
+
+  const [dragOver, setDragOver] = useState(false);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(false);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(false);
+    const files = e.dataTransfer?.files;
+    if (files && files.length > 0) {
+      processFiles(files);
+    }
+  }, [processFiles]);
 
   const removePendingImage = useCallback((index: number) => {
     setPendingImages((prev) => prev.filter((_, i) => i !== index));
@@ -529,7 +573,10 @@ export function VoiceAssistant() {
       <div
         ref={panelRef}
         style={panelStyle}
-        className={`bg-background border border-border shadow-2xl flex flex-col overflow-hidden ${maximized ? "" : "rounded-xl"}`}
+        className={`bg-background border shadow-2xl flex flex-col overflow-hidden ${maximized ? "" : "rounded-xl"} ${dragOver ? "border-primary border-2" : "border-border"}`}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
       >
         <div
           className={`flex items-center justify-between px-3 py-2 border-b border-border bg-muted/30 select-none ${maximized ? "" : "cursor-grab active:cursor-grabbing"}`}
@@ -587,7 +634,15 @@ export function VoiceAssistant() {
           </div>
         </div>
 
-        <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 space-y-3">
+        <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 space-y-3 relative">
+          {dragOver && (
+            <div className="absolute inset-0 bg-primary/10 border-2 border-dashed border-primary rounded-lg flex items-center justify-center z-10">
+              <div className="text-primary font-medium text-sm flex items-center gap-2">
+                <ImagePlus className="h-5 w-5" />
+                Solte a imagem aqui
+              </div>
+            </div>
+          )}
           {messages.map((msg, i) => (
             <div key={i} className={`flex gap-2 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
               {msg.role === "assistant" && (
@@ -701,10 +756,11 @@ export function VoiceAssistant() {
                     ? "Finalizando gravação..."
                   : transcribingAudio
                     ? "Transcrevendo áudio..."
-                    : "Digite ou fale..."
+                    : "Digite, fale ou cole uma imagem (Ctrl+V)..."
             }
             value={input}
             onChange={(e) => setInput(e.target.value)}
+            onPaste={handlePaste}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
                 e.preventDefault();
