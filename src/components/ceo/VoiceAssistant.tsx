@@ -748,10 +748,11 @@ export function VoiceAssistant() {
                     ? "Finalizando gravação..."
                   : transcribingAudio
                     ? "Transcrevendo áudio..."
-                    : "Digite ou fale..."
+                    : "Digite, fale ou cole uma imagem (Ctrl+V)..."
             }
             value={input}
             onChange={(e) => setInput(e.target.value)}
+            onPaste={handlePaste}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
                 e.preventDefault();
