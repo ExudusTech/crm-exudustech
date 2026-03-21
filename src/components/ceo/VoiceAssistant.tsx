@@ -598,12 +598,19 @@ export function VoiceAssistant() {
               <div
                 className={`max-w-[85%] rounded-lg px-3 py-2 text-xs ${msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-card border border-border text-foreground shadow-sm"}`}
               >
+                {msg.images && msg.images.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {msg.images.map((img, j) => (
+                      <img key={j} src={img} alt="Enviado" className="max-w-[140px] max-h-[100px] rounded border border-border/30 object-cover" />
+                    ))}
+                  </div>
+                )}
                 {msg.role === "assistant" ? (
                   <div className="prose prose-xs dark:prose-invert max-w-none text-xs prose-p:my-1 prose-ul:my-0.5 prose-li:my-0 prose-h2:text-xs prose-h3:text-xs prose-code:bg-muted prose-code:px-1 prose-code:rounded prose-code:text-[10px] prose-code:before:content-none prose-code:after:content-none">
                     <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
                   </div>
                 ) : (
-                  <span className="whitespace-pre-wrap">{msg.content}</span>
+                  <span className="whitespace-pre-wrap">{msg.content !== "(imagem enviada)" ? msg.content : ""}</span>
                 )}
                 {msg.createdEntities && msg.createdEntities.length > 0 && (
                   <div className="mt-1.5 flex flex-wrap gap-1">
@@ -634,7 +641,45 @@ export function VoiceAssistant() {
           )}
         </div>
 
+        {/* Pending images preview */}
+        {pendingImages.length > 0 && (
+          <div className="border-t border-border px-3 py-2 flex gap-2 flex-wrap">
+            {pendingImages.map((img, i) => (
+              <div key={i} className="relative group">
+                <img src={img} alt="Preview" className="h-12 w-12 rounded border border-border object-cover" />
+                <button
+                  type="button"
+                  onClick={() => removePendingImage(i)}
+                  className="absolute -top-1.5 -right-1.5 bg-destructive text-destructive-foreground rounded-full h-4 w-4 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <XCircle className="h-3 w-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          className="hidden"
+          onChange={handleImageUpload}
+        />
+
         <form className="border-t border-border p-3 flex gap-2 items-end" onSubmit={handleSubmit}>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="shrink-0 h-9 w-9"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={loading || transcribingAudio}
+            aria-label="Enviar imagem"
+          >
+            <ImagePlus className="h-4 w-4" />
+          </Button>
           <Button
             type="button"
             variant={isMicActive ? "destructive" : "outline"}
