@@ -34,6 +34,9 @@ serve(async (req) => {
 
     // Normalize phone
     let normalizedPhone = phone.replace(/\D/g, '');
+    if (normalizedPhone && !normalizedPhone.startsWith('55')) {
+      normalizedPhone = `55${normalizedPhone}`;
+    }
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -119,11 +122,31 @@ serve(async (req) => {
       }),
     });
 
-    const evolutionData = await evolutionResponse.json();
-    console.log('Resposta Evolution API:', evolutionData);
+    const responseContentType = evolutionResponse.headers.get('content-type') || '';
+    const rawResponseText = await evolutionResponse.text();
+
+    let evolutionData: any = null;
+    if (responseContentType.includes('application/json')) {
+      try {
+        evolutionData = rawResponseText ? JSON.parse(rawResponseText) : null;
+      } catch (parseError) {
+        console.error('Falha ao fazer parse do JSON da Evolution API:', parseError, rawResponseText);
+      }
+    }
+
+    console.log('Resposta Evolution API status/content-type:', evolutionResponse.status, responseContentType);
+    console.log('Resposta Evolution API body:', evolutionData ?? rawResponseText);
 
     if (!evolutionResponse.ok) {
-      throw new Error(`Erro Evolution API: ${JSON.stringify(evolutionData)}`);
+      const errorPayload = evolutionData ?? rawResponseText?.slice(0, 500) ?? 'sem corpo';
+      throw new Error(`Erro Evolution API [${evolutionResponse.status}]: ${typeof errorPayload === 'string' ? errorPayload : JSON.stringify(errorPayload)}`);
+    }
+
+    if (!evolutionData) {
+      evolutionData = {
+        success: true,
+        raw_response: rawResponseText,
+      };
     }
 
     // Save message to database
