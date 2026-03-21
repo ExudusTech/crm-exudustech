@@ -73,7 +73,7 @@ export function VoiceAssistant() {
   const [startingListening, setStartingListening] = useState(false);
   const [stoppingListening, setStoppingListening] = useState(false);
   const [transcribingAudio, setTranscribingAudio] = useState(false);
-  const [voiceEnabled, setVoiceEnabled] = useState(false);
+  const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [pendingImages, setPendingImages] = useState<string[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
