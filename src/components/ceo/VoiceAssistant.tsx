@@ -634,7 +634,15 @@ export function VoiceAssistant() {
           </div>
         </div>
 
-        <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 space-y-3">
+        <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 space-y-3 relative">
+          {dragOver && (
+            <div className="absolute inset-0 bg-primary/10 border-2 border-dashed border-primary rounded-lg flex items-center justify-center z-10">
+              <div className="text-primary font-medium text-sm flex items-center gap-2">
+                <ImagePlus className="h-5 w-5" />
+                Solte a imagem aqui
+              </div>
+            </div>
+          )}
           {messages.map((msg, i) => (
             <div key={i} className={`flex gap-2 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
               {msg.role === "assistant" && (
