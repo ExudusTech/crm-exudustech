@@ -494,7 +494,7 @@ export function VoiceAssistant() {
   );
 
   const isMicActive = listening || startingListening || stoppingListening;
-  const canSend = !loading && !transcribingAudio && !isMicActive && !!input.trim();
+  const canSend = !loading && !transcribingAudio && !isMicActive && (!!input.trim() || pendingImages.length > 0);
 
   const handleSubmit = useCallback(
     (event?: React.FormEvent<HTMLFormElement>) => {
