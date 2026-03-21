@@ -71,6 +71,7 @@ const CeoIA = () => {
       if (error) throw error;
 
       const reply = data?.reply || "Desculpe, não consegui processar.";
+      const spokenReply = data?.spoken_reply || reply;
       const createdEntities = data?.created_entities || [];
 
       if (createdEntities.length > 0) {
@@ -82,7 +83,7 @@ const CeoIA = () => {
 
       const assistantMsg: Message = { role: "assistant", content: reply, createdEntities };
       setMessages(prev => [...prev, assistantMsg]);
-      tts.speak(reply);
+      tts.speak(spokenReply);
     } catch (err: any) {
       const errorMsg = err?.message?.includes("429")
         ? "Muitas requisições. Aguarde um momento e tente novamente."
