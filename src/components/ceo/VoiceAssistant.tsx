@@ -74,7 +74,9 @@ export function VoiceAssistant() {
   const [stoppingListening, setStoppingListening] = useState(false);
   const [transcribingAudio, setTranscribingAudio] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(false);
+  const [pendingImages, setPendingImages] = useState<string[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
