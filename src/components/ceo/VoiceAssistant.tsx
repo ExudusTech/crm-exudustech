@@ -35,6 +35,7 @@ interface Message {
   role: "user" | "assistant";
   content: string;
   createdEntities?: string[];
+  images?: string[]; // base64 data URLs
 }
 
 const sttCorrections: Record<string, string> = {
