@@ -36,11 +36,14 @@ serve(async (req) => {
 
     const formData = new FormData();
     const resolvedMimeType = typeof mimeType === 'string' && mimeType ? mimeType : 'audio/webm';
-    const extension = resolvedMimeType.includes('ogg') ? 'ogg' : resolvedMimeType.includes('mp4') ? 'mp4' : 'webm';
+    const normalizedLanguage = typeof language === 'string' && language ? language : 'pt';
+    const extension = resolvedMimeType.includes('ogg') ? 'ogg' : resolvedMimeType.includes('mp4') ? 'mp4' : resolvedMimeType.includes('mpeg') ? 'mp3' : 'webm';
     const blob = new Blob([binaryAudio], { type: resolvedMimeType });
     formData.append('file', blob, `audio.${extension}`);
-    formData.append('model', 'whisper-1');
-    formData.append('language', typeof language === 'string' && language ? language : 'pt');
+    formData.append('model', 'gpt-4o-mini-transcribe');
+    formData.append('language', normalizedLanguage);
+    formData.append('prompt', 'O áudio está em português do Brasil. Transcreva literalmente e com alta fidelidade, preservando perguntas, nomes próprios e contexto executivo do Sistema CEO, incluindo termos como agenda, reunião, email, WhatsApp, iniciativa, stakeholder, projeto, financeiro e ExudusTech.');
+    formData.append('temperature', '0');
 
     const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
       method: 'POST',
@@ -57,7 +60,11 @@ serve(async (req) => {
     }
 
     const result = await response.json();
-    console.log('Transcription successful:', result.text);
+    console.log('Transcription successful:', {
+      mimeType: resolvedMimeType,
+      language: normalizedLanguage,
+      text: result.text,
+    });
 
     return new Response(
       JSON.stringify({ text: result.text }),

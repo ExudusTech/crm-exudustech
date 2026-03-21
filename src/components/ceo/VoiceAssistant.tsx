@@ -309,14 +309,17 @@ export function VoiceAssistant() {
         mediaStreamRef.current = stream;
 
         const supportedMimeType = [
+          "audio/ogg;codecs=opus",
           "audio/webm;codecs=opus",
           "audio/webm",
-          "audio/ogg;codecs=opus",
           "audio/mp4",
         ].find((mimeType) => MediaRecorder.isTypeSupported?.(mimeType));
 
         const recorder = supportedMimeType
-          ? new MediaRecorder(stream, { mimeType: supportedMimeType })
+          ? new MediaRecorder(stream, {
+              mimeType: supportedMimeType,
+              audioBitsPerSecond: 128000,
+            })
           : new MediaRecorder(stream);
 
         audioChunksRef.current = [];
@@ -376,7 +379,7 @@ export function VoiceAssistant() {
           await transcribeRecordedAudio(audioBlob);
         };
 
-        recorder.start();
+        recorder.start(250);
       })
       .catch((error: any) => {
         console.error("[VoiceAssistant] Falha ao acessar microfone", error);
