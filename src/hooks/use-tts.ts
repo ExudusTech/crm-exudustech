@@ -40,12 +40,17 @@ export function useTTS({ enabled, rate = 1.22, lang = "pt-BR" }: UseTTSOptions) 
     
     // Try to find a good Portuguese voice
     const voices = window.speechSynthesis?.getVoices() || [];
-    const ptVoice = voices.find(v => 
-      v.lang.startsWith("pt") && (v.name.includes("Google") || v.name.includes("Microsoft") || v.name.includes("Natural"))
-    ) || voices.find(v => v.lang.startsWith("pt"));
+    // Prefer female Portuguese voices for EVA persona
+    const femaleKeywords = ["female", "feminino", "Francisca", "Raquel", "Vitória", "Thalita", "Leila", "Fernanda", "Maria", "Ana"];
+    const ptVoices = voices.filter(v => v.lang.startsWith("pt"));
+    const femaleVoice = ptVoices.find(v => 
+      femaleKeywords.some(k => v.name.toLowerCase().includes(k.toLowerCase()))
+    ) || ptVoices.find(v => 
+      (v.name.includes("Google") || v.name.includes("Microsoft") || v.name.includes("Natural"))
+    ) || ptVoices[0];
     
-    if (ptVoice) {
-      utterance.voice = ptVoice;
+    if (femaleVoice) {
+      utterance.voice = femaleVoice;
     }
 
     utterance.onstart = () => {
