@@ -86,6 +86,8 @@ export function VoiceAssistant() {
   const dragOffset = useRef({ x: 0, y: 0 });
   const panelRef = useRef<HTMLDivElement>(null);
   const tts = useTTS({ enabled: voiceEnabled });
+  const stopRecognitionRef = useRef<(discardAudio?: boolean) => void>(() => undefined);
+  const stopTtsRef = useRef<() => void>(() => undefined);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -209,11 +211,19 @@ export function VoiceAssistant() {
   );
 
   useEffect(() => {
+    stopRecognitionRef.current = stopRecognition;
+  }, [stopRecognition]);
+
+  useEffect(() => {
+    stopTtsRef.current = tts.stop;
+  }, [tts.stop]);
+
+  useEffect(() => {
     return () => {
-      stopRecognition(true);
-      tts.stop();
+      stopRecognitionRef.current(true);
+      stopTtsRef.current();
     };
-  }, [stopRecognition, tts]);
+  }, []);
 
   useEffect(() => {
     if (open && !maximized) {
@@ -442,6 +452,15 @@ export function VoiceAssistant() {
   );
 
   const isMicActive = listening || startingListening || stoppingListening;
+  const canSend = !loading && !transcribingAudio && !isMicActive && !!input.trim();
+
+  const handleSubmit = useCallback(
+    (event?: React.FormEvent<HTMLFormElement>) => {
+      event?.preventDefault();
+      void sendMessage();
+    },
+    [sendMessage],
+  );
 
   const triggerButton = (
     <Button
@@ -573,7 +592,7 @@ export function VoiceAssistant() {
           )}
         </div>
 
-        <div className="border-t border-border p-3 flex gap-2 items-end">
+        <form className="border-t border-border p-3 flex gap-2 items-end" onSubmit={handleSubmit}>
           <Button
             type="button"
             variant={isMicActive ? "destructive" : "outline"}
@@ -600,7 +619,7 @@ export function VoiceAssistant() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
+              if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
                 e.preventDefault();
                 void sendMessage();
               }
@@ -609,16 +628,15 @@ export function VoiceAssistant() {
             rows={1}
           />
           <Button
-            type="button"
-            onClick={() => void sendMessage()}
-            disabled={loading || transcribingAudio || isMicActive || !input.trim()}
+            type="submit"
+            disabled={!canSend}
             size="icon"
             className="shrink-0 h-9 w-9"
             aria-label="Enviar mensagem"
           >
             <Send className="h-4 w-4" />
           </Button>
-        </div>
+        </form>
       </div>
     </>
   );
