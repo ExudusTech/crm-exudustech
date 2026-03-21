@@ -513,6 +513,23 @@ ${contextStr}`;
           },
         },
       },
+      {
+        type: "function",
+        function: {
+          name: "read_whatsapp_messages",
+          description: "Consulta mensagens de WhatsApp armazenadas no CRM. Pode buscar por telefone, nome do lead ou listar as mais recentes de um contato.",
+          parameters: {
+            type: "object",
+            properties: {
+              phone: { type: "string", description: "Telefone do contato (parcial ou completo)" },
+              lead_name: { type: "string", description: "Nome do lead/contato para buscar" },
+              limit: { type: "number", description: "Quantidade de mensagens (padrão 20)" },
+              direction: { type: "string", enum: ["inbound", "outbound"], description: "Filtrar por direção (recebidas ou enviadas)" },
+            },
+            required: [],
+          },
+        },
+      },
     ];
 
     // Build messages for AI, attaching images to the last user message if present
