@@ -89,7 +89,7 @@ export interface UseTTSOptions {
   lang?: string;
 }
 
-export function useTTS({ enabled, rate = 1.15, lang = "pt-BR" }: UseTTSOptions) {
+export function useTTS({ enabled, rate = 1.35, lang = "pt-BR" }: UseTTSOptions) {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const utteranceIndexRef = useRef(0);
