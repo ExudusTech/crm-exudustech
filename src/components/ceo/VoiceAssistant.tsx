@@ -546,6 +546,9 @@ export function VoiceAssistant() {
       setPendingImages([]);
       setLoading(true);
 
+      // Save user message (don't save base64 images to DB - too large)
+      saveMessage({ ...userMsg, images: undefined });
+
       try {
         const { data, error } = await supabase.functions.invoke("ceo-ai-assistant", {
           body: {
@@ -567,7 +570,9 @@ export function VoiceAssistant() {
           toast({ title: `${createdEntities.length} entidade(s) criada(s)`, description: createdEntities.join(", ") });
         }
 
-        setMessages((prev) => [...prev, { role: "assistant", content: reply, createdEntities }]);
+        const assistantMsg: Message = { role: "assistant", content: reply, createdEntities };
+        setMessages((prev) => [...prev, assistantMsg]);
+        saveMessage(assistantMsg);
         tts.speak(spokenReply);
       } catch (err: any) {
         const errorMsg = err?.message?.includes("429")
