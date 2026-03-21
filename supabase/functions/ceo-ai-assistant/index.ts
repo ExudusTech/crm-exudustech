@@ -496,12 +496,27 @@ ${contextStr}`;
           },
         },
       },
+      // Contact search across CRM and CEO modules
+      {
+        type: "function",
+        function: {
+          name: "search_contacts",
+          description: "Busca contatos por nome em todas as bases: leads (CRM), stakeholders (CEO) e whatsapp_messages. Use SEMPRE antes de enviar WhatsApp quando não tiver o telefone.",
+          parameters: {
+            type: "object",
+            properties: {
+              name: { type: "string", description: "Nome ou parte do nome do contato" },
+            },
+            required: ["name"],
+          },
+        },
+      },
       // Communication (CRM bridge)
       {
         type: "function",
         function: {
           name: "send_whatsapp",
-          description: "Envia mensagem WhatsApp via módulo CRM. SEMPRE peça confirmação antes.",
+          description: "Envia mensagem WhatsApp via módulo CRM. SEMPRE peça confirmação antes. Se não tiver o telefone, use search_contacts primeiro.",
           parameters: {
             type: "object",
             properties: {
