@@ -441,7 +441,7 @@ export function VoiceAssistant() {
     [input, listening, loading, messages, startingListening, toast, transcribingAudio, tts, user?.id],
   );
 
-  const isMicActive = listening || startingListening;
+  const isMicActive = listening || startingListening || stoppingListening;
 
   const triggerButton = (
     <Button
@@ -591,6 +591,8 @@ export function VoiceAssistant() {
                 ? "Ativando microfone..."
                 : listening
                   ? "Gravando... clique no microfone para parar"
+                  : stoppingListening
+                    ? "Finalizando gravação..."
                   : transcribingAudio
                     ? "Transcrevendo áudio..."
                     : "Digite ou fale..."
