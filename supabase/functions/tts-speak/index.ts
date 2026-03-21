@@ -1,0 +1,70 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
+    if (!OPENAI_API_KEY) {
+      throw new Error("OPENAI_API_KEY not configured");
+    }
+
+    const { text } = await req.json();
+
+    if (!text || typeof text !== "string") {
+      return new Response(JSON.stringify({ error: "Text is required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const response = await fetch("https://api.openai.com/v1/audio/speech", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini-tts",
+        voice: "coral",
+        format: "mp3",
+        speed: 1.12,
+        input: text.slice(0, 4000),
+        instructions:
+          "Fale em português do Brasil com voz feminina, calor humano e postura de secretária executiva premium. Use ritmo ágil, natural e confiante. Faça pausas curtas após vírgulas e pausas mais claras em perguntas e pontos finais. Evite soar robótica, monotônica ou lenta.",
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`OpenAI TTS error: ${errorText}`);
+    }
+
+    const audioBuffer = await response.arrayBuffer();
+
+    return new Response(audioBuffer, {
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "audio/mpeg",
+        "Cache-Control": "no-store",
+      },
+    });
+  } catch (error) {
+    console.error("tts-speak error:", error);
+
+    return new Response(
+      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
+  }
+});
