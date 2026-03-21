@@ -86,6 +86,36 @@ export type Database = {
         }
         Relationships: []
       }
+      ceo_chat_messages: {
+        Row: {
+          content: string
+          created_at: string
+          created_entities: Json | null
+          id: string
+          images: Json | null
+          role: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          created_entities?: Json | null
+          id?: string
+          images?: Json | null
+          role?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          created_entities?: Json | null
+          id?: string
+          images?: Json | null
+          role?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       ceo_documents: {
         Row: {
           created_at: string
