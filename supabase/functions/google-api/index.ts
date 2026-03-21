@@ -85,20 +85,55 @@ serve(async (req) => {
     // ===== GOOGLE CALENDAR =====
     if (service === "calendar") {
       if (action === "list_events") {
-        const { timeMin, timeMax, maxResults = 20 } = params || {};
+        const { timeMin, timeMax, maxResults = 50 } = params || {};
         const now = new Date().toISOString();
-        const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events?` +
-          `timeMin=${timeMin || now}&timeMax=${timeMax || ""}&maxResults=${maxResults}` +
-          `&singleEvents=true&orderBy=startTime&timeZone=America/Sao_Paulo`;
+        const effectiveTimeMin = timeMin || now;
 
-        const res = await fetch(url, { headers });
-        const data = await res.json();
-        await logSync(supabase, connectionId, "calendar", "list_events", `Listou ${data.items?.length || 0} eventos`);
+        // First, list all calendars the user has access to
+        const calListRes = await fetch("https://www.googleapis.com/calendar/v3/users/me/calendarList?minAccessRole=reader", { headers });
+        const calListData = await calListRes.json();
+        const calendars = calListData.items || [];
+        console.log(`[google-api] Found ${calendars.length} calendars:`, calendars.map((c: any) => `${c.summary} (${c.id})`));
 
-        // Update last sync
+        // Query events from all calendars in parallel
+        const allEvents: any[] = [];
+        const calendarFetches = calendars.map(async (cal: any) => {
+          let url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(cal.id)}/events?` +
+            `timeMin=${effectiveTimeMin}&maxResults=${maxResults}` +
+            `&singleEvents=true&orderBy=startTime&timeZone=America/Sao_Paulo`;
+          if (timeMax) url += `&timeMax=${timeMax}`;
+
+          try {
+            const res = await fetch(url, { headers });
+            const data = await res.json();
+            const items = (data.items || []).map((ev: any) => ({
+              ...ev,
+              calendarName: cal.summary || cal.id,
+            }));
+            console.log(`[google-api] Calendar "${cal.summary}": ${items.length} events`);
+            return items;
+          } catch (e: any) {
+            console.error(`[google-api] Error fetching calendar ${cal.id}:`, e.message);
+            return [];
+          }
+        });
+
+        const results = await Promise.all(calendarFetches);
+        for (const items of results) allEvents.push(...items);
+
+        // Sort by start time
+        allEvents.sort((a, b) => {
+          const aStart = a.start?.dateTime || a.start?.date || "";
+          const bStart = b.start?.dateTime || b.start?.date || "";
+          return aStart.localeCompare(bStart);
+        });
+
+        await logSync(supabase, connectionId, "calendar", "list_events", `Listou ${allEvents.length} eventos de ${calendars.length} calendários`);
         await supabase.from("google_connections").update({ last_sync_at: new Date().toISOString() }).eq("id", connectionId);
 
-        return new Response(JSON.stringify({ events: data.items || [] }), {
+        console.log(`[google-api] Total events returned: ${allEvents.length}`);
+
+        return new Response(JSON.stringify({ events: allEvents }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }

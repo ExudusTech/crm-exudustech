@@ -37,7 +37,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { messages, mode, user_id } = await req.json();
+    const { messages, mode, user_id, images } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
@@ -459,13 +459,34 @@ ${contextStr}`;
       },
     ];
 
+    // Build messages for AI, attaching images to the last user message if present
+    const aiMessages: any[] = [{ role: "system", content: systemPrompt }];
+    for (let i = 0; i < messages.length; i++) {
+      const msg = messages[i];
+      // If this is the last user message and we have images, use multimodal content
+      if (i === messages.length - 1 && msg.role === "user" && images?.length > 0) {
+        const content: any[] = [{ type: "text", text: msg.content }];
+        for (const img of images) {
+          content.push({
+            type: "image_url",
+            image_url: { url: img },
+          });
+        }
+        aiMessages.push({ role: msg.role, content });
+      } else {
+        aiMessages.push({ role: msg.role, content: msg.content });
+      }
+    }
+
+    console.log(`[ceo-ai-assistant] Sending ${aiMessages.length} messages to AI, images: ${images?.length || 0}`);
+
     // First AI call
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         model: "google/gemini-2.5-pro",
-        messages: [{ role: "system", content: systemPrompt }, ...messages],
+        messages: aiMessages,
         tools,
       }),
     });

@@ -16,6 +16,8 @@ import {
   Square,
   Pause,
   Play,
+  ImagePlus,
+  XCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -33,6 +35,7 @@ interface Message {
   role: "user" | "assistant";
   content: string;
   createdEntities?: string[];
+  images?: string[]; // base64 data URLs
 }
 
 const sttCorrections: Record<string, string> = {
@@ -71,7 +74,9 @@ export function VoiceAssistant() {
   const [stoppingListening, setStoppingListening] = useState(false);
   const [transcribingAudio, setTranscribingAudio] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(false);
+  const [pendingImages, setPendingImages] = useState<string[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -404,18 +409,51 @@ export function VoiceAssistant() {
       });
   }, [clearStopFallbackTimeout, listening, resetRecordingState, startingListening, stopMediaStream, stopRecognition, stoppingListening, toast, transcribeRecordedAudio]);
 
+  const handleImageUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+    
+    Array.from(files).forEach((file) => {
+      if (!file.type.startsWith("image/")) return;
+      if (file.size > 10 * 1024 * 1024) {
+        toast({ title: "Imagem muito grande (máx 10MB)", variant: "destructive" });
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (typeof reader.result === "string") {
+          setPendingImages((prev) => [...prev, reader.result as string]);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+    
+    // Reset input so same file can be selected again
+    e.target.value = "";
+  }, [toast]);
+
+  const removePendingImage = useCallback((index: number) => {
+    setPendingImages((prev) => prev.filter((_, i) => i !== index));
+  }, []);
+
   const sendMessage = useCallback(
     async (text?: string) => {
       if (startingListening || listening || transcribingAudio) return;
 
       const msg = (text ?? input.trim()).trim();
-      if (!msg || loading) return;
+      if ((!msg && pendingImages.length === 0) || loading) return;
 
-      const userMsg: Message = { role: "user", content: msg };
+      const userMsg: Message = { 
+        role: "user", 
+        content: msg || "(imagem enviada)", 
+        images: pendingImages.length > 0 ? [...pendingImages] : undefined,
+      };
       const updatedMessages = [...messages, userMsg];
 
       setMessages(updatedMessages);
       setInput("");
+      const imagesToSend = [...pendingImages];
+      setPendingImages([]);
       setLoading(true);
 
       try {
@@ -425,6 +463,7 @@ export function VoiceAssistant() {
               .filter((m) => m.role === "user" || m.role === "assistant")
               .map((m) => ({ role: m.role, content: m.content })),
             user_id: user?.id,
+            images: imagesToSend.length > 0 ? imagesToSend : undefined,
           },
         });
 
@@ -451,11 +490,11 @@ export function VoiceAssistant() {
         setLoading(false);
       }
     },
-    [input, listening, loading, messages, startingListening, toast, transcribingAudio, tts, user?.id],
+    [input, listening, loading, messages, pendingImages, startingListening, toast, transcribingAudio, tts, user?.id],
   );
 
   const isMicActive = listening || startingListening || stoppingListening;
-  const canSend = !loading && !transcribingAudio && !isMicActive && !!input.trim();
+  const canSend = !loading && !transcribingAudio && !isMicActive && (!!input.trim() || pendingImages.length > 0);
 
   const handleSubmit = useCallback(
     (event?: React.FormEvent<HTMLFormElement>) => {
@@ -559,12 +598,19 @@ export function VoiceAssistant() {
               <div
                 className={`max-w-[85%] rounded-lg px-3 py-2 text-xs ${msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-card border border-border text-foreground shadow-sm"}`}
               >
+                {msg.images && msg.images.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {msg.images.map((img, j) => (
+                      <img key={j} src={img} alt="Enviado" className="max-w-[140px] max-h-[100px] rounded border border-border/30 object-cover" />
+                    ))}
+                  </div>
+                )}
                 {msg.role === "assistant" ? (
                   <div className="prose prose-xs dark:prose-invert max-w-none text-xs prose-p:my-1 prose-ul:my-0.5 prose-li:my-0 prose-h2:text-xs prose-h3:text-xs prose-code:bg-muted prose-code:px-1 prose-code:rounded prose-code:text-[10px] prose-code:before:content-none prose-code:after:content-none">
                     <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
                   </div>
                 ) : (
-                  <span className="whitespace-pre-wrap">{msg.content}</span>
+                  <span className="whitespace-pre-wrap">{msg.content !== "(imagem enviada)" ? msg.content : ""}</span>
                 )}
                 {msg.createdEntities && msg.createdEntities.length > 0 && (
                   <div className="mt-1.5 flex flex-wrap gap-1">
@@ -595,7 +641,45 @@ export function VoiceAssistant() {
           )}
         </div>
 
+        {/* Pending images preview */}
+        {pendingImages.length > 0 && (
+          <div className="border-t border-border px-3 py-2 flex gap-2 flex-wrap">
+            {pendingImages.map((img, i) => (
+              <div key={i} className="relative group">
+                <img src={img} alt="Preview" className="h-12 w-12 rounded border border-border object-cover" />
+                <button
+                  type="button"
+                  onClick={() => removePendingImage(i)}
+                  className="absolute -top-1.5 -right-1.5 bg-destructive text-destructive-foreground rounded-full h-4 w-4 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <XCircle className="h-3 w-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          className="hidden"
+          onChange={handleImageUpload}
+        />
+
         <form className="border-t border-border p-3 flex gap-2 items-end" onSubmit={handleSubmit}>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="shrink-0 h-9 w-9"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={loading || transcribingAudio}
+            aria-label="Enviar imagem"
+          >
+            <ImagePlus className="h-4 w-4" />
+          </Button>
           <Button
             type="button"
             variant={isMicActive ? "destructive" : "outline"}
