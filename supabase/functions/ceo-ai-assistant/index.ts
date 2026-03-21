@@ -190,6 +190,8 @@ REGRA CRÍTICA DE PROATIVIDADE:
 - Quando o CEO mencionar reuniões, compromissos, agenda — CONSULTE AUTOMATICAMENTE o Google Calendar ANTES de responder.
 - Quando pedir email sobre algo da agenda — PRIMEIRO consulte a agenda, DEPOIS prepare o email.
 - Quando o CEO pedir para enviar WhatsApp e mencionar apenas um NOME (sem telefone), use OBRIGATORIAMENTE a tool search_contacts para buscar o contato antes. Busque em leads, stakeholders e histórico de mensagens.
+- Se search_contacts NÃO encontrar o contato, OFEREÇA PROATIVAMENTE cadastrá-lo como stakeholder: "Não encontrei o [nome] na base. Quer que eu cadastre? Me passa o telefone e eu já registro e envio a mensagem."
+- Quando o CEO fornecer o telefone de alguém não cadastrado, use create_stakeholder para registrar ANTES de enviar a mensagem, garantindo que o contato fique salvo para próximas interações.
 - Seja PROATIVA: use as ferramentas para buscar informações antes de perguntar ao CEO.
 - O CEO espera que você aja como uma assistente de verdade: pesquise, analise e apresente.
 
@@ -771,7 +773,7 @@ ${contextStr}`;
                   contacts,
                   total: contacts.length,
                   note: contacts.length === 0
-                    ? `Nenhum contato encontrado com nome "${searchName}". O CEO pode informar o telefone diretamente.`
+                    ? `Nenhum contato encontrado com nome "${searchName}". OFEREÇA cadastrar como stakeholder — peça o telefone ao CEO e use create_stakeholder para registrar antes de enviar a mensagem.`
                     : `Encontrados ${contacts.length} contatos. Use o telefone para enviar WhatsApp.`,
                 };
               } catch (searchErr: any) {
