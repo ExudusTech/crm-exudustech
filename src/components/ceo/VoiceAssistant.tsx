@@ -55,18 +55,19 @@ function correctTranscript(text: string) {
   return corrected;
 }
 
+const WELCOME_MESSAGE: Message = {
+  role: "assistant",
+  content:
+    "Olá! Sou o assistente IA do Sistema CEO. Fale ou digite o que precisa:\n\n- 📝 **Cadastrar** iniciativas, organizações, stakeholders, tarefas, projetos\n- 🔗 **Vincular** entidades entre si\n- 📊 **Consultar** radar, agenda, finanças\n- 📧 **Emails** e 📁 **Drive**\n\nExemplo: *\"Criar projeto HMK IA com prioridade alta\"*",
+};
+
 export function VoiceAssistant() {
   const { toast } = useToast();
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [maximized, setMaximized] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      role: "assistant",
-      content:
-        "Olá! Sou o assistente IA do Sistema CEO. Fale ou digite o que precisa:\n\n- 📝 **Cadastrar** iniciativas, organizações, stakeholders, tarefas, projetos\n- 🔗 **Vincular** entidades entre si\n- 📊 **Consultar** radar, agenda, finanças\n- 📧 **Emails** e 📁 **Drive**\n\nExemplo: *\"Criar projeto HMK IA com prioridade alta\"*",
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([WELCOME_MESSAGE]);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [listening, setListening] = useState(false);
@@ -93,6 +94,51 @@ export function VoiceAssistant() {
   const tts = useTTS({ enabled: voiceEnabled });
   const stopRecognitionRef = useRef<(discardAudio?: boolean) => void>(() => undefined);
   const stopTtsRef = useRef<() => void>(() => undefined);
+
+  // Load chat history from database
+  useEffect(() => {
+    if (!user?.id || historyLoaded) return;
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from("ceo_chat_messages")
+          .select("role, content, images, created_entities, created_at")
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: true })
+          .limit(200);
+        if (error) throw error;
+        if (data && data.length > 0) {
+          const loaded: Message[] = data.map((m: any) => ({
+            role: m.role as "user" | "assistant",
+            content: m.content,
+            images: m.images || undefined,
+            createdEntities: m.created_entities || undefined,
+          }));
+          setMessages([WELCOME_MESSAGE, ...loaded]);
+        }
+      } catch (e) {
+        console.error("Failed to load chat history:", e);
+      } finally {
+        setHistoryLoaded(true);
+      }
+    })();
+  }, [user?.id, historyLoaded]);
+
+  // Save message to database
+  const saveMessage = useCallback(async (msg: Message) => {
+    if (!user?.id) return;
+    try {
+      await supabase.from("ceo_chat_messages").insert({
+        user_id: user.id,
+        role: msg.role,
+        content: msg.content,
+        images: msg.images && msg.images.length > 0 ? msg.images : null,
+        created_entities: msg.createdEntities && msg.createdEntities.length > 0 ? msg.createdEntities : null,
+      } as any);
+    } catch (e) {
+      console.error("Failed to save chat message:", e);
+    }
+  }, [user?.id]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -500,6 +546,9 @@ export function VoiceAssistant() {
       setPendingImages([]);
       setLoading(true);
 
+      // Save user message (don't save base64 images to DB - too large)
+      saveMessage({ ...userMsg, images: undefined });
+
       try {
         const { data, error } = await supabase.functions.invoke("ceo-ai-assistant", {
           body: {
@@ -521,7 +570,9 @@ export function VoiceAssistant() {
           toast({ title: `${createdEntities.length} entidade(s) criada(s)`, description: createdEntities.join(", ") });
         }
 
-        setMessages((prev) => [...prev, { role: "assistant", content: reply, createdEntities }]);
+        const assistantMsg: Message = { role: "assistant", content: reply, createdEntities };
+        setMessages((prev) => [...prev, assistantMsg]);
+        saveMessage(assistantMsg);
         tts.speak(spokenReply);
       } catch (err: any) {
         const errorMsg = err?.message?.includes("429")
@@ -535,7 +586,7 @@ export function VoiceAssistant() {
         setLoading(false);
       }
     },
-    [input, listening, loading, messages, pendingImages, startingListening, toast, transcribingAudio, tts, user?.id],
+    [input, listening, loading, messages, pendingImages, saveMessage, startingListening, toast, transcribingAudio, tts, user?.id],
   );
 
   const isMicActive = listening || startingListening || stoppingListening;
